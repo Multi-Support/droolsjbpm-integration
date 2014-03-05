@@ -1,0 +1,20 @@
+package org.jbpm.task.indexing.service;
+
+import java.util.Comparator;
+
+import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryResult;
+import org.kie.api.task.model.Task;
+import org.kie.internal.task.api.InternalTaskService;
+
+public interface IndexingTaskService extends InternalTaskService {
+
+	QueryResult<Task> findTasks(int offset, int count, Comparator<Task> comparator, Filter<?, ?>... filters);
+
+	/*QueryResult<Attachment> findAttachments(int offset, int count, Comparator<Attachment> comparator, Filter<?, ?>... filters);
+	
+	QueryResult<Attachment> findContents(int offset, int count, Comparator<Content> comparator, Filter<?, ?>... filters);
+	
+	QueryResult<Attachment> findComments(int offset, int count, Comparator<Comment> comparator, Filter<?, ?>... filters);*/
+
+}
