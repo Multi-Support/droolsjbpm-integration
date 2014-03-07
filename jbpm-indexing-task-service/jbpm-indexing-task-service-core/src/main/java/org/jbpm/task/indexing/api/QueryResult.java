@@ -25,8 +25,6 @@ public class QueryResult<T> extends AbstractList<T> {
     private long total;
 
     /**
-     * Constructs a new instance of {@link QueryResultImpl}.
-     *
      * @param offset The offset to start with.
      * @param result List of returned records.
      * @param total  The total number of records that match the query
@@ -39,7 +37,7 @@ public class QueryResult<T> extends AbstractList<T> {
 
 
     /**
-     * Constructs a new instance of {@link QueryResultImpl} with a {@link
+     * Constructs a new instance of {@link QueryResult} with a {@link
      * Comparator}.
      *
      * @param offset     The offset to start with.
@@ -95,7 +93,7 @@ public class QueryResult<T> extends AbstractList<T> {
     @Override
     public String toString() {
         StringBuffer sb = new StringBuffer();
-        sb.append("QueryResultImpl [comparator=").append(comparator)
+        sb.append("QueryResult [comparator=").append(comparator)
             .append(", count=").append(size()).append(", offset=")
             .append(offset).append(", total=").append(total)
             .append(", result=");

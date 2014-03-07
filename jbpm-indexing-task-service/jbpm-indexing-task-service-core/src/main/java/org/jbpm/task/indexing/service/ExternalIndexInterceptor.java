@@ -58,12 +58,12 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements Tas
 			System.out.println("insertedTasks.get = " + insertedTasks.get());
 			System.out.println("service = " + service);
 			
-			ref = service.prepare(modifiedTasks.get().values(), insertedTasks.get().values());
+			service.prepare(modifiedTasks.get().values(), insertedTasks.get().values());
 			service.commit();
 			return result;
 		} catch (Exception e) {
 			//rollback index
-			service.rollback(ref);
+			service.rollback();
 			throw new RuntimeException(e);
 		} finally {
 			modifiedTasks.remove();
