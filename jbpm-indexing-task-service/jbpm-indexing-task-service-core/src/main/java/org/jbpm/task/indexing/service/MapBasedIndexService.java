@@ -1,5 +1,6 @@
 package org.jbpm.task.indexing.service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -14,11 +15,10 @@ import org.jbpm.task.indexing.api.QueryResult;
 import org.jbpm.task.indexing.api.TermFilter;
 import org.kie.api.task.model.Task;
 
-public class MapBasedIndexService implements ExternalIndexService {
+public class MapBasedIndexService implements ExternalIndexService<Task> {
 
 	private Map<Long, Map<String, Object>> indexes = new HashMap<Long, Map<String, Object>>();
 	private Map<Long, Task> tasks = new HashMap<Long, Task>();
-	private int counter = 0;
 	private TaskIndexStrategy strategy;
 
 	public MapBasedIndexService() {
@@ -33,11 +33,13 @@ public class MapBasedIndexService implements ExternalIndexService {
 		this.strategy = strategy;
 	}
 	
-	public void rollback(Integer ref) {
-		System.out.println("rollback: " + ref);
+	public void rollback() {
+		System.out.println("rollback:");
 	}
-	
-	public void syncIndex(Iterator<Task> persistedTasks) {
+
+    @Override
+	public void syncIndex(Iterator<Task> persistedTasks,
+        TaskContentReader contentReader) {
 		if (persistedTasks != null) {
 			while (persistedTasks.hasNext()) {
 				putInIndex(persistedTasks.next());
@@ -45,7 +47,8 @@ public class MapBasedIndexService implements ExternalIndexService {
 		}
 	}
 	
-	public Integer prepare(Collection<Task> updates, Collection<Task> inserts) {
+	public void prepare(Collection<Task> updates, Collection<Task> inserts,
+        TaskContentReader reader) {
 		System.out.println("prepare: " + updates + ", " + inserts);
 		if (inserts != null) {
 			for (Task task : inserts) {
@@ -57,8 +60,7 @@ public class MapBasedIndexService implements ExternalIndexService {
 				removeFromIndex(task);
 				putInIndex(task);
 			}
-		}
-		return ++counter;
+        }
 	}
 
 	private void removeFromIndex(Task task) {
@@ -70,12 +72,14 @@ public class MapBasedIndexService implements ExternalIndexService {
 		indexes.put(task.getId(), strategy.index(task));
 		tasks.put(task.getId(), task);
 	}
-	
-	public void commit() { 
+
+    public void commit() {
 		System.out.println("commit");
 	}
-	
-	public List<Task> get(String q) {
+
+
+
+    public List<Task> get(String q) {
 		List<Task> result = new ArrayList<Task>();
 		for (Map.Entry<Long, Map<String, Object>> entry : indexes.entrySet()) {
 			if (toString(entry.getValue()).contains(q)) {
@@ -93,10 +97,10 @@ public class MapBasedIndexService implements ExternalIndexService {
 		return sb.toString();
 	}
 
-	public <T> QueryResult<T> find(Class<T> class1, int offset, int count,
-			Comparator<T> comparator, Filter<?, ?>... filters) {
+	public QueryResult<Task> find(int offset, int count,
+			Comparator<Task> comparator, Filter<?, ?>... filters) {
 		int total = 0;
-		Collection<T> result = new HashSet<T>();
+		Collection<Task> result = new HashSet<Task>();
 		Collection<Long> taskIdClone = new ArrayList<Long>(tasks.keySet());
 		for (Filter filter : filters) {
 			if (filter instanceof TermFilter) {
@@ -104,11 +108,11 @@ public class MapBasedIndexService implements ExternalIndexService {
 				for (Long taskId : taskIdClone) {
 					String index = toString(indexes.get(taskId));
 					if (tf.matches(index)) {
-						result.add((T) tasks.get(taskId));
+						result.add(tasks.get(taskId));
 					}
 				}
 			}
 		}
-		return new QueryResult<T>(0, result.size(), result);
+		return new QueryResult<Task>(0, result.size(), result);
 	}
 }

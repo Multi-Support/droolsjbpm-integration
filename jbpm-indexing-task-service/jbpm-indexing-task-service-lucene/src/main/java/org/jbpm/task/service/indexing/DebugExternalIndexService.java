@@ -1,6 +1,5 @@
 package org.jbpm.task.service.indexing;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -9,17 +8,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryResult;
+import org.jbpm.task.indexing.service.ExternalIndexService;
+import org.jbpm.task.indexing.service.SimpleTaskIndexStrategy;
+import org.jbpm.task.indexing.service.TaskContentReader;
+import org.jbpm.task.indexing.service.TaskIndexStrategy;
 import org.kie.api.task.model.Task;
 
-import com.multisupport.query.Filter;
-import com.multisupport.query.QueryResult;
-import com.multisupport.query.QueryResultImpl;
-
-public class DebugExternalIndexService implements ExternalIndexService {
+public class DebugExternalIndexService implements ExternalIndexService <Task> {
 
 	private Map<Long, Map<String, Object>> indexes = new HashMap<Long, Map<String, Object>>();
 	private Map<Long, Task> tasks = new HashMap<Long, Task>();
-	private int counter = 0;
 	private TaskIndexStrategy strategy;
 
 	public DebugExternalIndexService() {
@@ -33,12 +33,14 @@ public class DebugExternalIndexService implements ExternalIndexService {
 	public DebugExternalIndexService(TaskIndexStrategy strategy) {
 		this.strategy = strategy;
 	}
-	
-	public void rollback(Integer ref) {
-		System.out.println("rollback: " + ref);
+
+    @Override
+	public void rollback() {
+		System.out.println("rollback");
 	}
-	
-	public void syncIndex(Iterator<Task> persistedTasks) {
+
+    @Override
+	public void syncIndex(Iterator<Task> persistedTasks, TaskContentReader reader) {
 		if (persistedTasks != null) {
 			while (persistedTasks.hasNext()) {
 				putInIndex(persistedTasks.next());
@@ -46,7 +48,7 @@ public class DebugExternalIndexService implements ExternalIndexService {
 		}
 	}
 	
-	public Integer prepare(Collection<Task> updates, Collection<Task> inserts) {
+	public void prepare(Collection<Task> updates, Collection<Task> inserts, TaskContentReader reader) {
 		System.out.println("prepare: " + updates + ", " + inserts);
 		if (inserts != null) {
 			for (Task task : inserts) {
@@ -58,8 +60,7 @@ public class DebugExternalIndexService implements ExternalIndexService {
 				removeFromIndex(task);
 				putInIndex(task);
 			}
-		}
-		return ++counter;
+        }
 	}
 
 	private void removeFromIndex(Task task) {
@@ -71,12 +72,12 @@ public class DebugExternalIndexService implements ExternalIndexService {
 		indexes.put(task.getId(), strategy.index(task));
 		tasks.put(task.getId(), task);
 	}
-	
-	public void commit() { 
+
+    public void commit() {
 		System.out.println("commit");
 	}
-	
-	public List<Task> get(String q) {
+
+    public List<Task> get(String q) {
 		List<Task> result = new ArrayList<Task>();
 		for (Map.Entry<Long, Map<String, Object>> entry : indexes.entrySet()) {
 			if (toString(entry.getValue()).contains(q)) {
@@ -94,11 +95,12 @@ public class DebugExternalIndexService implements ExternalIndexService {
 		return sb.toString();
 	}
 
-	public <T> QueryResult<T> find(Class<T> class1, int offset, int count,
-			Comparator<T> comparator, Filter<?, ?>... filters) {
+    @Override
+	public QueryResult<Task> find( int offset, int count,
+			Comparator<Task> comparator, Filter<?, ?>... filters) {
 		int total = 0; //TODO implement search
-		Collection<T> result = new ArrayList<T>(); //TODO implement search
+		Collection<Task> result = new ArrayList<Task>(); //TODO implement search
 		
-		return new QueryResultImpl<T>(URI.create("mock"), offset, total, result);
+		return new QueryResult<Task>(offset,total,result);
 	}
 }

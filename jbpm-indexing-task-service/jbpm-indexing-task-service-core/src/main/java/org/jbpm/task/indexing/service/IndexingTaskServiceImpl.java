@@ -25,7 +25,7 @@ public class IndexingTaskServiceImpl extends CommandBasedTaskService implements 
 		ExternalIndexInterceptor logger = new ExternalIndexInterceptor(externalIndexService);
 		cmdExecutor.addInterceptor(logger);
 		taskEventSupport.addEventListener(logger);
-		cmdExecutor.execute(new ReloadAllTasksCommand(externalIndexService));
+		cmdExecutor.execute(new ReloadAllTasksCommand(externalIndexService,logger));
 	}
 
     public QueryResult<Task> findTasks(int offset, int count, Comparator<Task> comparator, Filter<?, ?>... filters) {

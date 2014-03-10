@@ -1,5 +1,6 @@
 package org.jbpm.task.indexing.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.jbpm.services.task.commands.TaskCommand;
@@ -12,9 +13,11 @@ import org.kie.internal.task.api.TaskPersistenceContext;
 public class ReloadAllTasksCommand extends TaskCommand<Void> {
 
 	private ExternalIndexService service;
+    private TaskContentReader reader;
 
-	public ReloadAllTasksCommand(ExternalIndexService service) {
+	public ReloadAllTasksCommand(ExternalIndexService service, TaskContentReader reader) {
 		this.service = service;
+        this.reader = reader;
 	}
 	
 	public Void execute(Context context) {
@@ -23,7 +26,11 @@ public class ReloadAllTasksCommand extends TaskCommand<Void> {
 		List<Task> tasks = persistenceContext.queryInTransaction("GetAllTasks",
 				ClassUtil.<List<Task>>castClass(List.class));
 		//WARNING: tasks should be an iterator, but JPA doesn't support
-		service.syncIndex(tasks.iterator());
-		return null;
+        try {
+            service.syncIndex(tasks.iterator(), reader);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
 	}
 }

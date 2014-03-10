@@ -9,16 +9,19 @@ import org.jbpm.task.indexing.api.Filter;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.kie.api.task.model.Task;
 
-public interface ExternalIndexService {
+public interface ExternalIndexService <T> {
 
-	void prepare(Collection<Task> updates, Collection<Task> inserts)
+	void prepare(Collection<Task> updates, Collection<Task> inserts,
+        TaskContentReader contentReader)
         throws IOException;
 
 	void commit() throws IOException;
 
 	void rollback();
 
-	void syncIndex(Iterator<Task> previousTasks) throws IOException;
+	void syncIndex(Iterator<Task> previousTasks,
+        TaskContentReader contentReader) throws IOException;
 
-	<T> QueryResult<T> find(Class<T> class1, int offset, int count, Comparator<T> comparator, Filter<?, ?>... filters);
+	QueryResult<T> find(int offset, int count, Comparator<T> comparator, Filter<?, ?>... filters)
+        throws IOException;
 }

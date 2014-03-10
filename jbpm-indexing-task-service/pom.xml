@@ -18,7 +18,7 @@
 
   <modules>
     <module>jbpm-indexing-task-service-core</module>
-    <!--module>jbpm-indexing-task-service-lucene</module-->
+    <module>jbpm-indexing-task-service-lucene</module>
   </modules>
 
   <properties>
@@ -39,11 +39,29 @@
         <version>${project.version}</version>
       </dependency>
 
-      <dependency>
-        <groupId>org.apache.lucene</groupId>
-        <artifactId>lucene-core</artifactId>
-        <version>${version.org.apache.lucene}</version>
-      </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${version.org.apache.lucene}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>${version.org.apache.lucene}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+            <version>${version.org.apache.lucene}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.7</version>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 

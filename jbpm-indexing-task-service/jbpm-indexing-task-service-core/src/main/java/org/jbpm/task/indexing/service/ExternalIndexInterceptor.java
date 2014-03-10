@@ -58,7 +58,7 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements Tas
 			System.out.println("insertedTasks.get = " + insertedTasks.get());
 			System.out.println("service = " + service);
 			
-			service.prepare(modifiedTasks.get().values(), insertedTasks.get().values());
+			service.prepare(modifiedTasks.get().values(), insertedTasks.get().values(), this);
 			service.commit();
 			return result;
 		} catch (Exception e) {
