@@ -1,5 +1,6 @@
 package org.jbpm.task.indexing.service;
 
+import java.io.IOException;
 import java.util.Comparator;
 
 import org.drools.core.command.CommandService;
@@ -28,7 +29,8 @@ public class IndexingTaskServiceImpl extends CommandBasedTaskService implements 
 		cmdExecutor.execute(new ReloadAllTasksCommand(externalIndexService,logger));
 	}
 
-    public QueryResult<Task> findTasks(int offset, int count, Comparator<Task> comparator, Filter<?, ?>... filters) {
-    	return externalIndexService.find(Task.class, offset, count, comparator, filters);
+    public QueryResult<Task> findTasks(int offset, int count, Comparator<Task> comparator, Filter<?, ?>... filters)
+        throws IOException {
+    	return externalIndexService.find(offset, count, comparator, filters);
     }
 }
