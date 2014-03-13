@@ -90,7 +90,7 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
     };
 
 
-    public void LuceneIndexService(Environment environment) throws IOException {
+    public LuceneIndexService(Environment environment) throws IOException {
         this.environment = environment;
         Directory directory = new RAMDirectory();
         queryBuilder = new LuceneQueryBuilder();
