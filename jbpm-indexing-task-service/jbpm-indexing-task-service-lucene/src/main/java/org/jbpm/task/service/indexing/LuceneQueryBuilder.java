@@ -20,17 +20,22 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
+import org.jbpm.task.indexing.api.ChainedComparator;
 import org.jbpm.task.indexing.api.Filter;
 import org.jbpm.task.indexing.api.FilterGroup;
 import org.jbpm.task.indexing.api.NumericFilter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryStringFilter;
 import org.jbpm.task.indexing.api.RangeFilter;
 import org.jbpm.task.indexing.api.TermFilter;
 import org.jbpm.task.indexing.api.WildCardFilter;
+
 
 
 public class LuceneQueryBuilder {
@@ -38,11 +43,12 @@ public class LuceneQueryBuilder {
     //If adding special filters add mapping between filter and
     //index here.
     enum FilterMapping {
-        DEFAULT;
 
+        DEFAULT;
         static String getField(Filter f) {
             return f.getField();
         }
+
     }
 
 
@@ -57,36 +63,34 @@ public class LuceneQueryBuilder {
     private Analyzer analyzer = new KeywordAnalyzer();
 
 
-    /*
-    <T> Sort getSort(Comparator<T> comparator) {
-        if (comparator instanceof AbstractComparator) {
-            return new Sort(getSortField(comparator));
-        } else if (comparator instanceof ChainedComparator) {
-            List<SortField> sortFields = new ArrayList<>();
-            for (Comparator c : ((ChainedComparator) comparator)
+    <T> Sort getSort(QueryComparator<T> comparator) {
+        if (comparator instanceof ChainedComparator) {
+            List<SortField> sortFields = new ArrayList<SortField>();
+            for (QueryComparator c : ((ChainedComparator) comparator)
                 .getComparators()) {
-                sortFields.add(getSortField((AbstractComparator<T>) c));
+                sortFields.add(getSortField(c));
             }
             return new Sort(
                 sortFields.toArray(new SortField[sortFields.size()]));
         }
-        return null;
+        return new Sort(getSortField(comparator));
     }
 
     @SuppressWarnings("rawtypes")
-    private <T> SortField getSortField(Comparator<T> comparator) {
-        String name =
-            ComparatorMapping.getField((AbstractComparator) comparator);
-        Direction direction = ((AbstractComparator) comparator).getDirection();
-        SortField.Type sortType = SortField.Type.STRING;
-
-        if (FilterMapping.CREATION_DATE_FILTER.getField().equals(name)) {
+    private <T> SortField getSortField(QueryComparator<T> comparator) {
+        String name =  comparator.getName();
+        QueryComparator.Direction direction = comparator.getDirection();
+        SortField.Type sortType;
+        if (comparator.getType() == Date.class
+            || comparator.getType() == Long.class) {
             sortType = SortField.Type.LONG;
+        } else {
+            sortType = SortField.Type.STRING;
         }
         return new SortField(name, sortType,
-            direction == AbstractComparator.Direction.DESCENDING);
+            direction == QueryComparator.Direction.DESCENDING);
     }
-    */
+
 
     /**
      * Converts a collection of <tt>Filter</tt>s into the equivalent
