@@ -8,6 +8,7 @@ import org.jbpm.services.task.commands.TaskCommandExecutorImpl;
 import org.jbpm.services.task.events.TaskEventSupport;
 import org.jbpm.services.task.impl.command.CommandBasedTaskService;
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.kie.api.task.model.Task;
 
@@ -29,7 +30,7 @@ public class IndexingTaskServiceImpl extends CommandBasedTaskService implements 
 		cmdExecutor.execute(new ReloadAllTasksCommand(externalIndexService,logger));
 	}
 
-    public QueryResult<Task> findTasks(int offset, int count, Comparator<Task> comparator, Filter<?, ?>... filters)
+    public QueryResult<Task> findTasks(int offset, int count, QueryComparator<Task> comparator, Filter<?, ?>... filters)
         throws IOException {
     	return externalIndexService.find(offset, count, comparator, filters);
     }

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.jbpm.task.indexing.api.TermFilter;
 import org.kie.api.task.model.Task;
@@ -98,7 +99,7 @@ public class MapBasedIndexService implements ExternalIndexService<Task> {
 	}
 
 	public QueryResult<Task> find(int offset, int count,
-			Comparator<Task> comparator, Filter<?, ?>... filters) {
+			QueryComparator<Task> comparator, Filter<?, ?>... filters) {
 		int total = 0;
 		Collection<Task> result = new HashSet<Task>();
 		Collection<Long> taskIdClone = new ArrayList<Long>(tasks.keySet());
