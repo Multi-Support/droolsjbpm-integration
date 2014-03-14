@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.jbpm.task.indexing.service.ExternalIndexService;
 import org.jbpm.task.indexing.service.SimpleTaskIndexStrategy;
@@ -97,7 +98,7 @@ public class DebugExternalIndexService implements ExternalIndexService <Task> {
 
     @Override
 	public QueryResult<Task> find( int offset, int count,
-			Comparator<Task> comparator, Filter<?, ?>... filters) {
+			QueryComparator<Task> comparator, Filter<?, ?>... filters) {
 		int total = 0; //TODO implement search
 		Collection<Task> result = new ArrayList<Task>(); //TODO implement search
 		

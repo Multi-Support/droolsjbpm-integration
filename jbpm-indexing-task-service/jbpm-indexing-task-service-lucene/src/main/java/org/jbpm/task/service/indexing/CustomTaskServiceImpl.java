@@ -7,6 +7,7 @@ import org.drools.core.command.CommandService;
 import org.jbpm.services.task.events.TaskEventSupport;
 import org.jbpm.services.task.impl.command.CommandBasedTaskService;
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.jbpm.task.indexing.service.ExternalIndexService;
 import org.kie.api.task.model.Task;
@@ -27,7 +28,7 @@ public class CustomTaskServiceImpl extends CommandBasedTaskService
     }
 
     public QueryResult<Task> findTasks(int offset, int count,
-        Comparator<Task> comparator, Filter<?, ?>... filters)
+        QueryComparator<Task> comparator, Filter<?, ?>... filters)
         throws IOException {
         return externalIndexService
             .find(offset, count, comparator, filters);
