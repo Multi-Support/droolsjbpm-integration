@@ -41,6 +41,9 @@ import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
+import org.drools.core.command.CommandService;
+import org.jbpm.services.task.events.TaskEventSupport;
+import org.jbpm.services.task.impl.command.CommandBasedTaskService;
 import org.jbpm.services.task.utils.ContentMarshallerHelper;
 import org.jbpm.task.indexing.api.Filter;
 import org.jbpm.task.indexing.api.QueryComparator;
@@ -57,7 +60,7 @@ import org.kie.api.task.model.PeopleAssignments;
 import org.kie.api.task.model.Task;
 import org.kie.api.task.model.TaskData;
 
-public class LuceneIndexService implements ExternalIndexService <Task> {
+public class LuceneIndexService extends CommandBasedTaskService implements ExternalIndexService <Task> {
 
     private static final String STR = "_STR";
     private static final String TASK_BINARY = "task_binary";
@@ -91,7 +94,9 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
     };
 
 
-    public LuceneIndexService(Environment environment) throws IOException {
+    public LuceneIndexService(CommandService service, TaskEventSupport support
+        ,Environment environment) throws IOException {
+        super(service, support);
         this.environment = environment;
         Directory directory = new RAMDirectory();
         queryBuilder = new LuceneQueryBuilder();
