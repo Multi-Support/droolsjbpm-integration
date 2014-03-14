@@ -5,7 +5,10 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 
+import javax.management.Query;
+
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.kie.api.task.model.Task;
 
@@ -22,6 +25,7 @@ public interface ExternalIndexService <T> {
 	void syncIndex(Iterator<Task> previousTasks,
         TaskContentReader contentReader) throws IOException;
 
-	QueryResult<T> find(int offset, int count, Comparator<T> comparator, Filter<?, ?>... filters)
+	QueryResult<T> find(int offset, int count, QueryComparator<T> comparator,
+        Filter<?, ?>... filters)
         throws IOException;
 }

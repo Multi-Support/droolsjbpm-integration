@@ -7,7 +7,6 @@ import java.io.ObjectOutput;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +35,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
+import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
@@ -43,6 +43,7 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.jbpm.services.task.utils.ContentMarshallerHelper;
 import org.jbpm.task.indexing.api.Filter;
+import org.jbpm.task.indexing.api.QueryComparator;
 import org.jbpm.task.indexing.api.QueryResult;
 import org.jbpm.task.indexing.service.ExternalIndexService;
 import org.jbpm.task.indexing.service.TaskContentReader;
@@ -296,16 +297,13 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
 
     @Override
     public QueryResult<Task> find( int offset, int count,
-        Comparator<Task> comparator, Filter<?, ?>... filters)  throws IOException{
+        QueryComparator<Task> comparator, Filter<?, ?>... filters)
+        throws IOException{
         IndexSearcher search = getSearcher(tiw.getGeneration());
 
         Query query = queryBuilder.buildQuery(search, filters);
-
-        //Sort sort = indexUtil.getSort(comparator);
-
-
-        TopDocs td = search.search(query, offset + count);
-           //: search.search(query, offset + count, sort);
+        Sort s  = queryBuilder.getSort(comparator);
+        TopDocs td = search.search(query, offset + count, s);
         int c = 0;
         List<Task> l = new ArrayList();
         try {
