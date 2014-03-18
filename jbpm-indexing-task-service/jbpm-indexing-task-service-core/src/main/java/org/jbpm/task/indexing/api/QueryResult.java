@@ -11,11 +11,6 @@ import java.util.List;
  * <p/>
  * The QueryResult contains important additional meta-data such as offset,
  * total number of records and which comparator was used in the query.
- *
- * @param <T>
- * @author Hans Lund
- * @author Johnnie Pedersen
- * @version $Id: QueryResult.java,v 1.1.4.35.2.1 2014/01/24 09:21:01 hl Exp $
  */
 public class QueryResult<T> extends AbstractList<T> {
 

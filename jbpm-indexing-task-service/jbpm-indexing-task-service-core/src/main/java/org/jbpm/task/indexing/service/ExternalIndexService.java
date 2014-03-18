@@ -2,10 +2,7 @@ package org.jbpm.task.indexing.service;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Iterator;
-
-import javax.management.Query;
 
 import org.jbpm.task.indexing.api.Filter;
 import org.jbpm.task.indexing.api.QueryComparator;

@@ -17,10 +17,6 @@ import java.util.List;
  * of special chars, making it easy to deploy the filter towards any match
  * engine.
  *
- * @param <K> The object type filtered upon.
- * @author Hans Lund
- * @version $Id: WildCardFilter.java,v 1.1.2.5 2010-06-22 09:02:43 MSRD+hl Exp
- *          $
  */
 public class WildCardFilter<K> extends TermFilter<K> {
 

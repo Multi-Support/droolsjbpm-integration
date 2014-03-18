@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.DataFormatException;
 
-import com.thoughtworks.xstream.XStream;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.document.CompressionTools;
@@ -41,7 +40,6 @@ import org.apache.lucene.search.similarities.DefaultSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
-
 import org.jbpm.services.task.utils.ContentMarshallerHelper;
 import org.jbpm.task.indexing.api.Filter;
 import org.jbpm.task.indexing.api.QueryComparator;
@@ -58,11 +56,13 @@ import org.kie.api.task.model.PeopleAssignments;
 import org.kie.api.task.model.Task;
 import org.kie.api.task.model.TaskData;
 
-public class LuceneIndexService implements ExternalIndexService <Task> {
+import com.thoughtworks.xstream.XStream;
+
+public class LuceneIndexService implements ExternalIndexService<Task> {
 
     private static final String STR = "_STR";
     private static final String TASK_BINARY = "task_binary";
-    private static final String FAULT_CONTENT ="faultContent_binary";
+    private static final String FAULT_CONTENT = "faultContent_binary";
     private static final String DOCUMENT_CONTENT = "documentContent_binary";
     private static final String OUTPUT_CONTENT = "output_binary";
 
@@ -77,61 +77,36 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
     private SearcherManager sm;
     private ControlledRealTimeReopenThread<IndexSearcher> reopener;
 
-    private ThreadLocal<List<Document>> adds = new ThreadLocal<List<Document>>(){
-        @Override
-        protected List<Document> initialValue() {
-            return new ArrayList<Document>();
-        }
-    };
+    private ThreadLocal<List<Document>> adds =
+            new ThreadLocal<List<Document>>() {
+                @Override
+                protected List<Document> initialValue() {
+                    return new ArrayList<Document>();
+                }
+            };
 
-    private ThreadLocal<List<Document>> updates = new ThreadLocal<List<Document>>(){
-        @Override
-        protected List<Document> initialValue() {
-            return new ArrayList<Document>();
-        }
-    };
-
+    private ThreadLocal<List<Document>> updates =
+            new ThreadLocal<List<Document>>() {
+                @Override
+                protected List<Document> initialValue() {
+                    return new ArrayList<Document>();
+                }
+            };
 
     public LuceneIndexService(Environment environment) throws IOException {
         this.environment = environment;
         Directory directory = new RAMDirectory();
         queryBuilder = new LuceneQueryBuilder();
 
-        iw = new IndexWriter(directory,
-            new IndexWriterConfig(Version.LUCENE_47, keywordAnalyzer));
+        iw = new IndexWriter(directory, new IndexWriterConfig(
+            Version.LUCENE_47, keywordAnalyzer));
 
         sm = new SearcherManager(iw, true, new WarmSearchFactory());
         tiw = new TrackingIndexWriter(iw);
-        reopener = new ControlledRealTimeReopenThread(tiw, sm,3,0);
+        reopener = new ControlledRealTimeReopenThread(tiw, sm, 3, 0);
         reopener.setDaemon(true);
         reopener.start();
 
-    }
-
-    private static class WarmSearchFactory extends SearcherFactory {
-        public IndexSearcher newSearcher(IndexReader reader)
-            throws IOException {
-            IndexSearcher searcher = new IndexSearcher(reader);
-            searcher.setSimilarity(new IsolationSimilarity());
-            return new IndexSearcher(reader);
-        }
-    }
-
-    private static class IsolationSimilarity extends DefaultSimilarity {
-        public IsolationSimilarity() {
-        }
-
-        public float idf(int docFreq, int numDocs) {
-            return (float) 1.0;
-        }
-
-        public float coord(int overlap, int maxOverlap) {
-            return 1.0f;
-        }
-
-        public float lengthNorm(String fieldName, int numTerms) {
-            return 1.0f;
-        }
     }
 
     @Override
@@ -141,136 +116,13 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
         this.updates.get().clear();
 
         for (Task t : inserts) {
-            tiw.addDocument(prepareDocument(t,reader));
+            tiw.addDocument(prepareDocument(t, reader));
         }
         for (Task t : updates) {
             tiw.updateDocument(new Term("id", String.valueOf(t.getId())),
-                prepareDocument(t,reader));
+                prepareDocument(t, reader));
         }
         tiw.getIndexWriter().prepareCommit();
-    }
-
-    private Document prepareDocument(Task t, TaskContentReader reader) {
-
-        Document d = new Document();
-        addKeyWordField("ALL", "ALL", d, false);
-        d.add(new StoredField(TASK_BINARY, CompressionTools
-            .compress(xs.toXML(t).getBytes(Charset.forName("UTF-8")))));
-        //;
-        for (I18NText text : t.getDescriptions()) {
-            addDefaultField("description", text.getText(), d, true);
-        }
-        addKeyWordField("id", String.valueOf(t.getId()), d, false);
-        for (I18NText name : t.getNames()) {
-            addKeyWordField("name", name.getText(), d, true);
-        }
-        for (OrganizationalEntity admin : t.getPeopleAssignments()
-            .getBusinessAdministrators()) {
-            addKeyWordField("businessAdministrator", admin.getId(), d,
-                true);
-        }
-        for (OrganizationalEntity potUser : t.getPeopleAssignments()
-            .getPotentialOwners()) {
-            addKeyWordField("potentialOwner", potUser.getId(), d, true);
-        }
-        addKeyWordField("taskInitiator",
-            t.getPeopleAssignments().getTaskInitiator().getId(), d, true);
-        addIntField("priority", t.getPriority(), d, false);
-        for (I18NText subject : t.getSubjects()) {
-            addKeyWordField("subject", subject.getText(), d, true);
-        }
-
-        prepareTaskDate(t.getId(), t.getTaskData(), d, reader);
-        addKeyWordField("taskType", t.getTaskType(), d, false);
-        addKeyWordField("type", "Task", d, false);
-        return d;
-    }
-
-
-    private void prepareTaskDate(long taskId, TaskData data, Document d, TaskContentReader reader) {
-        addDateField("activationTime", data.getActivationTime(), d, true);
-        addKeyWordField("actualOwner", data.getActualOwner().getId(), d, true);
-
-        for (Attachment att : data.getAttachments()) {
-            //TODO we could add in separate doc and use BlockJoinQuery
-            addDateField("attachment_attachedAt", att.getAttachedAt(), d, false);
-            addKeyWordField("attachment_attachedBy",
-                att.getAttachedBy().getId(), d, false);
-            addLongField("attachment_attachmentContentId",
-                att.getAttachmentContentId(), d, false);
-            addKeyWordField("attachment_contentType", att.getContentType(), d,
-                false);
-            addLongField("attachment_Id", att.getId(), d, false);
-            addKeyWordField("attachment_name", att.getName(), d, false);
-            addIntField("attachment_size", att.getSize(), d, false);
-        }
-
-
-        for (Comment c : data.getComments()) {
-            addDefaultField("comment", c.getText(),d, true);
-            addDateField("comment_date", c.getAddedAt(), d, false);
-            addKeyWordField("comment_addedBy",c.getAddedBy().getId(), d, false);
-            addLongField("comment_id", c.getId(), d, false);
-            c.getText();c.getAddedAt();c.getAddedBy();
-        }
-
-        addKeyWordField("createdBy", data.getCreatedBy().getId(), d, true);
-        addDateField("createdOn",data.getCreatedOn(),d,true);
-
-        //load content?
-        addContent(taskId, data.getDocumentContentId(), "documentContent", d, data.getDocumentType(), reader);
-
-        addLongField("deploymentId", data.getDocumentContentId(), d, false);
-        addKeyWordField("documentType", data.getDocumentType(), d, true);
-
-        addDateField("expirationTime", data.getExpirationTime(), d, true);
-
-        addContent(taskId, data.getFaultContentId(), "FaultContent", d, data.getFaultType(), reader);
-        addKeyWordField("faultName", data.getFaultName(), d, false);
-
-        addContent(taskId, data.getOutputContentId(), "outputContent", d, data.getOutputType(), reader);
-
-        addLongField("parentId", data.getParentId(), d, false);
-        addKeyWordField("previousStatus", data.getPreviousStatus().name(), d,
-            false);
-        addKeyWordField("processId", data.getProcessId(), d, false);
-        addLongField("processInstanceId", data.getProcessInstanceId(), d, false);
-        addIntField("processSessionId", data.getProcessSessionId(), d, false);
-        addKeyWordField("status", data.getStatus().name(), d, false);
-    }
-
-    private void addContent(long taskId, long id, String prefix, Document doc, String type, TaskContentReader reader) {
-        Content data = reader.getTaskContent(taskId, id);
-        try {
-
-            Class c = Thread.currentThread().getContextClassLoader().loadClass(type);
-            if (!(c == Map.class || c.isAssignableFrom(Map.class))) {
-                throw new IllegalArgumentException("Only map content is supported");
-
-            }
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("type not loadable", e);
-        }
-        Map<String, Object> content =
-            (Map<String, Object>) ContentMarshallerHelper
-                .unmarshall(data.getContent(), environment);
-        doc.add(new StoredField(prefix + "_binary", CompressionTools
-            .compress(xs.toXML(content).getBytes(Charset.forName("UTF-8")))));
-        for (Map.Entry<String, Object> en : content.entrySet()) {
-            if (en.getValue().getClass() == Date.class) {
-                addDateField(prefix + "_" + en.getKey(), (Date) en.getValue(), doc, false);
-            } else if (en.getValue().getClass() == Long.class) {
-                addLongField(prefix + "_" + en.getKey(), (Long) en.getValue(),
-                    doc, false);
-            } else if (en.getValue().getClass() == Integer.class) {
-                addIntField(prefix + "_" + en.getKey(), (Integer) en.getValue(),
-                    doc, false);
-            } else {
-                addKeyWordField(prefix + "_" + en.getKey(),
-                    en.getValue().toString(),
-                    doc, false);
-            }
-        }
     }
 
     @Override
@@ -281,48 +133,54 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
     @Override
     public void rollback() {
         try {
-        tiw.getIndexWriter().rollback();
+            tiw.getIndexWriter().rollback();
         } catch (IOException e) {
-           throw new RuntimeException("Unable to rollback",e);
+            throw new RuntimeException("Unable to rollback", e);
         }
     }
 
     @Override
-    public void syncIndex(Iterator<Task> previousTasks, TaskContentReader reader) throws IOException {
+    public void syncIndex(Iterator<Task> previousTasks,
+            TaskContentReader reader) throws IOException {
+
         while (previousTasks.hasNext()) {
             iw.addDocument(prepareDocument(previousTasks.next(), reader));
         }
     }
 
-
-
     @Override
-    public QueryResult<Task> find( int offset, int count,
-        QueryComparator<Task> comparator, Filter<?, ?>... filters)
-        throws IOException{
-        IndexSearcher search = getSearcher(tiw.getGeneration());
+    public QueryResult<Task> find(int offset, int count,
+            QueryComparator<Task> comparator, Filter<?, ?>... filters)
+            throws IOException {
 
+        IndexSearcher search = getSearcher(tiw.getGeneration());
         Query query = queryBuilder.buildQuery(search, filters);
-        Sort s  = queryBuilder.getSort(comparator);
+        Sort s = queryBuilder.getSort(comparator);
+
         TopDocs td = search.search(query, offset + count, s);
         int c = 0;
-        List<Task> l = new ArrayList();
+        List<Task> l = new ArrayList<Task>();
         try {
             while (c < count && offset + c < td.totalHits) {
                 Document doc = search.doc(td.scoreDocs[offset + c++].doc);
                 IndexedTask in = new IndexedTask();
-                in.embedded = (Task) xs.fromXML(new ByteArrayInputStream(CompressionTools.
-                    decompress(doc.getBinaryValue(TASK_BINARY))));
-                in.faultContent = (Map<String,Object>)
-                    xs.fromXML(new ByteArrayInputStream(
-                    CompressionTools.decompress(
-                        doc.getBinaryValue(FAULT_CONTENT))));
-                in.documentContent = (Map<String,Object>)
-                    xs.fromXML(new ByteArrayInputStream(
-                        CompressionTools.decompress(doc.getBinaryValue(DOCUMENT_CONTENT))));
-                in.outputContent = (Map<String,Object>)
-                    xs.fromXML(new ByteArrayInputStream(
-                        CompressionTools.decompress(doc.getBinaryValue(OUTPUT_CONTENT))));
+                in.embedded = (Task) xs.fromXML(new ByteArrayInputStream(
+                        CompressionTools.decompress(
+                            doc.getBinaryValue(TASK_BINARY))));
+
+                 in.faultContent = (Map<String,Object>)
+                 xs.fromXML(new ByteArrayInputStream(
+                 CompressionTools.decompress(
+                 doc.getBinaryValue(FAULT_CONTENT))));
+
+                in.documentContent =(Map<String,Object>)
+                 xs.fromXML(new ByteArrayInputStream(
+                 CompressionTools.decompress(
+                 doc.getBinaryValue(DOCUMENT_CONTENT))));
+                 in.outputContent = (Map<String,Object>)
+                 xs.fromXML(new ByteArrayInputStream(
+                 CompressionTools.decompress(
+                     doc.getBinaryValue(OUTPUT_CONTENT))));
                 l.add(in);
             }
         } catch (DataFormatException e) {
@@ -330,7 +188,170 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
         } finally {
             sm.release(search);
         }
-        return new QueryResult(offset, td.totalHits, l);
+        return new QueryResult<Task>(offset, td.totalHits, l);
+    }
+
+    private Document prepareDocument(Task t, TaskContentReader reader) {
+
+        Document d = new Document();
+        addKeyWordField("ALL", "ALL", d, false);
+        d.add(new StoredField(TASK_BINARY, CompressionTools.compress(
+                xs.toXML(t).getBytes(Charset.forName("UTF-8")))));
+
+        for (I18NText text : t.getDescriptions()) {
+            addDefaultField("description", text.getText(), d, true);
+        }
+        addKeyWordField("id", String.valueOf(t.getId()), d, false);
+
+        for (I18NText name : t.getNames()) {
+            addDefaultField("name", name.getText(), d, true);
+        }
+
+        for (OrganizationalEntity admin : t.getPeopleAssignments()
+                .getBusinessAdministrators()) {
+            addKeyWordField("businessAdministrator", admin.getId(), d, true);
+        }
+
+        for (OrganizationalEntity potUser : t.getPeopleAssignments()
+                .getPotentialOwners()) {
+            addKeyWordField("potentialOwner", potUser.getId(), d, true);
+        }
+
+        if (t.getPeopleAssignments().getTaskInitiator() != null) {
+            addKeyWordField("taskInitiator", t.getPeopleAssignments()
+                    .getTaskInitiator().getId(), d, true);
+        }
+
+        addIntField("priority", t.getPriority(), d, false);
+
+        for (I18NText subject : t.getSubjects()) {
+            addKeyWordField("subject", subject.getText(), d, true);
+        }
+
+        prepareTaskDate(t.getId(), t.getTaskData(), d, reader);
+        addKeyWordField("taskType", t.getTaskType(), d, false);
+        addKeyWordField("type", "Task", d, false);
+        return d;
+    }
+
+    private void prepareTaskDate(long taskId, TaskData data, Document d,
+        TaskContentReader reader) {
+
+        d.add(new StoredField(DOCUMENT_CONTENT, CompressionTools.compress(xs
+                .toXML(
+                    reader.getTaskContent(taskId, data.getDocumentContentId()))
+                .getBytes(Charset.forName("UTF-8")))));
+
+        addDateField("activationTime", data.getActivationTime(), d, true);
+        if (data.getActualOwner() != null) {
+            addKeyWordField("actualOwner", data.getActualOwner().getId(), d,
+                true);
+        }
+
+        for (Attachment att : data.getAttachments()) {
+            // TODO we could add in separate doc and use BlockJoinQuery
+            addDateField("attachment_attachedAt", att.getAttachedAt(), d,
+                false);
+            addKeyWordField("attachment_attachedBy", att.getAttachedBy()
+                    .getId(), d, false);
+            addLongField("attachment_attachmentContentId",
+                att.getAttachmentContentId(), d, false);
+            addKeyWordField("attachment_contentType", att.getContentType(), d,
+                false);
+            addLongField("attachment_Id", att.getId(), d, false);
+            addKeyWordField("attachment_name", att.getName(), d, false);
+            addIntField("attachment_size", att.getSize(), d, false);
+        }
+
+        for (Comment c : data.getComments()) {
+            addDefaultField("comment", c.getText(), d, true);
+            addDateField("comment_date", c.getAddedAt(), d, false);
+            addKeyWordField("comment_addedBy", c.getAddedBy().getId(), d,
+                false);
+            addLongField("comment_id", c.getId(), d, false);
+            c.getText();
+            c.getAddedAt();
+            c.getAddedBy();
+        }
+
+        if (data.getCreatedBy() != null) {
+            addKeyWordField("createdBy", data.getCreatedBy().getId(), d, true);
+        }
+        addDateField("createdOn", data.getCreatedOn(), d, true);
+
+        // load content?
+        addContent(taskId, data.getDocumentContentId(), "documentContent", d,
+            data.getDocumentType(), reader);
+
+        addLongField("deploymentId", data.getDocumentContentId(), d, false);
+        addKeyWordField("documentType", data.getDocumentType(), d, true);
+
+        addDateField("expirationTime", data.getExpirationTime(), d, true);
+
+        addContent(taskId, data.getFaultContentId(), "FaultContent", d,
+            data.getFaultType(), reader);
+        addKeyWordField("faultName", data.getFaultName(), d, false);
+
+        addContent(taskId, data.getOutputContentId(), "outputContent", d,
+            data.getOutputType(), reader);
+
+        addLongField("parentId", data.getParentId(), d, false);
+        if (data.getPreviousStatus() != null) {
+            addKeyWordField("previousStatus", data.getPreviousStatus().name(),
+                d, false);
+        }
+        addKeyWordField("processId", data.getProcessId(), d, false);
+        addLongField("processInstanceId", data.getProcessInstanceId(), d,
+            false);
+        addIntField("processSessionId", data.getProcessSessionId(), d, false);
+        if (data.getStatus() != null) {
+            addKeyWordField("status", data.getStatus().name(), d, false);
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void addContent(long taskId, long id, String prefix, Document doc,
+        String type, TaskContentReader reader) {
+
+        Content data = reader.getTaskContent(taskId, id);
+        if (data == null) {
+            return;
+        }
+
+        try {
+            Class c = Thread.currentThread().getContextClassLoader().loadClass(
+                type);
+            if (!(c == Map.class || Map.class.isAssignableFrom(c))) {
+                throw new IllegalArgumentException(
+                        "Only map content is supported");
+
+            }
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("type not loadable", e);
+        }
+        Map<String, Object> content = 
+                (Map<String, Object>) ContentMarshallerHelper.unmarshall(
+                    data.getContent(), environment);
+        if (content == null) {
+            return;
+        }
+        doc.add(new StoredField(prefix + "_binary", CompressionTools.compress(
+            xs.toXML(content).getBytes(Charset.forName("UTF-8")))));
+        for (Map.Entry<String, Object> en : content.entrySet()) {
+            if (en.getValue().getClass() == Date.class) {
+                addDateField(prefix + "_" + en.getKey(), (Date) en.getValue(),
+                    doc, false);
+            } else if (en.getValue().getClass() == Long.class) {
+                addLongField(prefix + "_" + en.getKey(), (Long) en.getValue(),
+                    doc, false);
+            } else if (en.getValue().getClass() == Integer.class) {
+                addIntField(prefix + "_" + en.getKey(),
+                    (Integer) en.getValue(), doc, false);
+            } else {
+                addKeyWordField(prefix + "_" + en.getKey(), en.getValue()
+                        .toString(), doc, false);
+            }
+        }
     }
 
     private IndexSearcher getSearcher(long neededCommitPoint)
@@ -338,13 +359,11 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
         try {
             reopener.waitForGeneration(neededCommitPoint);
         } catch (InterruptedException e) {
-            throw new IllegalStateException("Interrupted while waiting for generation");
+            throw new IllegalStateException(
+                    "Interrupted while waiting for generation");
         }
         return sm.acquire();
     }
-
-
-
 
     private void addDefaultField(String name, String value, Document d,
         boolean includeInFreeText) {
@@ -414,19 +433,19 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
         if (includeInFreeText) {
             addFreeTextField(strVal, doc);
         }
-    } 
-    
-    private static class IndexedTask implements Task {
+    }
 
+    private static class IndexedTask implements Task {
 
         private Task embedded;
         private Map<String, Object> faultContent;
         private Map<String, Object> outputContent;
         private Map<String, Object> documentContent;
 
-        public  IndexedTask(){}
+        public IndexedTask() {
+        }
 
-        private Map<String, Object> getFaultContent(){
+        private Map<String, Object> getFaultContent() {
             return faultContent;
         }
 
@@ -434,7 +453,7 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
             return outputContent;
         }
 
-        private Map<String, Object> getDocumentContent(){
+        private Map<String, Object> getDocumentContent() {
             return documentContent;
         }
 
@@ -480,13 +499,42 @@ public class LuceneIndexService implements ExternalIndexService <Task> {
 
         @Override
         public void writeExternal(ObjectOutput out) throws IOException {
-             embedded.writeExternal(out);
+            embedded.writeExternal(out);
         }
 
         @Override
-        public void readExternal(ObjectInput in)
-            throws IOException, ClassNotFoundException {
+        public void readExternal(ObjectInput in) throws IOException,
+            ClassNotFoundException {
             embedded.readExternal(in);
         }
     }
+
+    private static class WarmSearchFactory extends SearcherFactory {
+
+        public IndexSearcher newSearcher(IndexReader reader)
+                throws IOException {
+
+            IndexSearcher searcher = new IndexSearcher(reader);
+            searcher.setSimilarity(new IsolationSimilarity());
+            return new IndexSearcher(reader);
+        }
+    }
+
+    private static class IsolationSimilarity extends DefaultSimilarity {
+        public IsolationSimilarity() {
+        }
+
+        public float idf(int docFreq, int numDocs) {
+            return (float) 1.0;
+        }
+
+        public float coord(int overlap, int maxOverlap) {
+            return 1.0f;
+        }
+
+        public float lengthNorm(String fieldName, int numTerms) {
+            return 1.0f;
+        }
+    }
+
 }

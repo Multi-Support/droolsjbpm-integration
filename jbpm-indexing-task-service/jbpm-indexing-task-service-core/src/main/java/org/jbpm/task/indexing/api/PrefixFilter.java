@@ -4,10 +4,6 @@ package org.jbpm.task.indexing.api;
 /**
  * A prefix filter is a TermFilter, where the terms are treated as prefixes to
  * the matches.
- *
- * @param <K> the type of element being filtered.
- * @author Hans Lund
- * @version $Id: PrefixFilter.java,v 1.1.4.35.2.1 2014/01/24 09:21:01 hl Exp $
  */
 public class PrefixFilter<K> extends WildCardFilter<K> {
 

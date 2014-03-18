@@ -84,6 +84,8 @@ public class LuceneQueryBuilder {
         if (comparator.getType() == Date.class
             || comparator.getType() == Long.class) {
             sortType = SortField.Type.LONG;
+        } else if (comparator.getType() == Integer.class) {
+            sortType = SortField.Type.INT;
         } else {
             sortType = SortField.Type.STRING;
         }

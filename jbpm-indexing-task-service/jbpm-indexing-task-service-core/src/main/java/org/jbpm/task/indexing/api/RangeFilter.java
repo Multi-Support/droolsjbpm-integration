@@ -11,7 +11,7 @@ import java.lang.reflect.Array;
  * @param <K> the type being filtered.
  * @param <T> the type being used in match.
  * @author Hans Lund
- * @version $Id: RangeFilter.java,v 1.1.4.35.2.1 2013/04/17 13:26:01 hl Exp $
+ * @version $Id: RangeFilter.java,v 1.1.2.1 2014/03/17 07:31:19 hl Exp $
  */
 public class RangeFilter<K, T>
     extends Filter<K, RangeFilter.Range> {

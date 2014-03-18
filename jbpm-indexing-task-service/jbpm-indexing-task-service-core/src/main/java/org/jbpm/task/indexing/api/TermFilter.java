@@ -5,7 +5,7 @@ package org.jbpm.task.indexing.api;
  *
  * @param <K> the type of element we can filter on.
  * @author Hans Lund
- * @version $Id: TermFilter.java,v 1.1.4.35.2.3 2014/01/24 09:21:01 hl Exp $
+ * @version $Id: TermFilter.java,v 1.1.2.2 2014/03/18 13:22:25 sa Exp $
  */
 public class TermFilter<K> extends Filter<K, String> {
 
@@ -15,7 +15,7 @@ public class TermFilter<K> extends Filter<K, String> {
      * matches the filter. (using OR operator between terms).
      *
      * @param occurs the filters effect
-     * @param field  the filed
+     * @param field  the field
      * @param terms  the initial terms.
      */
     public TermFilter(Occurs occurs, String field, String... terms) {

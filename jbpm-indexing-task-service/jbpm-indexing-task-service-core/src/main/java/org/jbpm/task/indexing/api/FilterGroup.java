@@ -10,7 +10,7 @@ package org.jbpm.task.indexing.api;
  *
  * @param <K> the type of elements being filtered be the filter.
  * @author Hans Lund
- * @version $Id: FilterGroup.java,v 1.1.4.35.2.1 2014/01/24 09:21:01 hl Exp $
+ * @version $Id: FilterGroup.java,v 1.1.2.1 2014/03/17 07:31:20 hl Exp $
  */
 public class FilterGroup<K> extends ObjectFilter<K, Filter> {
 

@@ -10,10 +10,6 @@ import java.util.List;
  * A filter defines a constrain for a query.
  * <p/>
  *
- * @param <K> the type being filtered.
- * @param <T> the type of the filter.
- * @author Hans Lund
- * @version $Id: Filter.java,v 1.1.4.35.2.2 2014/01/24 09:21:01 hl Exp $
  */
 public abstract class Filter<K, T> implements Serializable {
 
