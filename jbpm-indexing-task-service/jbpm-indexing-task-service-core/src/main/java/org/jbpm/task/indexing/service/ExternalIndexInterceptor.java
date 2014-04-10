@@ -19,6 +19,7 @@ import org.jbpm.services.task.commands.RemoveTaskCommand;
 import org.jbpm.services.task.commands.RemoveTasksCommand;
 import org.jbpm.services.task.commands.SetTaskPropertyCommand;
 import org.jbpm.services.task.commands.TaskCommand;
+import org.jbpm.services.task.commands.TaskContext;
 import org.jbpm.services.task.lifecycle.listeners.TaskLifeCycleEventListener;
 import org.jbpm.services.task.utils.ContentMarshallerHelper;
 import org.kie.api.command.Command;
@@ -29,6 +30,7 @@ import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.command.Context;
 
 import org.kie.internal.task.api.TaskModelProvider;
+import org.kie.internal.task.api.TaskPersistenceContext;
 import org.kie.internal.task.api.model.ContentData;
 import org.kie.internal.task.api.model.FaultData;
 
@@ -68,7 +70,7 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements
                 @Override
                 public T execute(Context context) {
                     T result = ((TaskCommand<T>) command).execute(context);
-                    me.populateContentsFromCommand(command, result);
+                    me.populateContentsFromCommand(command, result, context);
                     try {
                         service.prepare(modifiedTasks.get().values(),
                             insertedTasks.get().values(), me);
@@ -187,7 +189,8 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements
         modifiedTasks.get().put(event.getTask().getId(), event.getTask());
     }
 
-    protected void populateContentsFromCommand(Command<?> command, Object result) {
+    protected void populateContentsFromCommand(Command<?> command,
+        Object result, Context context) {
         if (command instanceof AddContentCommand) {
             AddContentCommand addContentCommand = (AddContentCommand) command;
             Long taskId = addContentCommand.getTaskId();
@@ -332,6 +335,12 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements
                     }
                     putInMap(spCommand.getTaskId(), contentObject2);
                     break;
+                default:
+                    SetTaskPropertyCommand stpc = (SetTaskPropertyCommand) command;
+                    TaskPersistenceContext jpa = ((TaskContext) context).getPersistenceContext();
+                    long taskId = stpc.getTaskId();
+                    modifiedTasks.get().put(taskId, jpa.findTask(taskId));
+                    break;
             }
         } else if (command instanceof DeleteContentCommand) {
             DeleteContentCommand dcCommand = (DeleteContentCommand) command;
@@ -349,7 +358,7 @@ public class ExternalIndexInterceptor extends AbstractInterceptor implements
         } else if (command instanceof CompositeCommand) {
             CompositeCommand<?> composite = (CompositeCommand<?>) command;
             for (Command<?> subCommand : composite.getCommands()) {
-                populateContentsFromCommand(subCommand, result);
+                populateContentsFromCommand(subCommand, result, context);
             }
         }
     }
