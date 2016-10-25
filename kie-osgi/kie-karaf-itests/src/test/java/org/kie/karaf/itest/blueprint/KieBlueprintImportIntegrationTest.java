@@ -1,5 +1,21 @@
 package org.kie.karaf.itest.blueprint;
 
+/*
+ * Copyright 2016 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import org.kie.karaf.itest.AbstractKarafIntegrationTest;
 import org.kie.karaf.itest.blueprint.domain.Customer;
 import org.kie.karaf.itest.blueprint.domain.Drink;
@@ -25,7 +41,6 @@ import static org.ops4j.pax.exam.CoreOptions.*;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 import static org.ops4j.pax.tinybundles.core.TinyBundles.bundle;
 
-@Ignore("Fails for builds with -Dmaven.repo.local=<path> (e.g. the PR builds). Needs to be investigated.")
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
 public class KieBlueprintImportIntegrationTest extends AbstractKarafIntegrationTest {
@@ -101,7 +116,7 @@ public class KieBlueprintImportIntegrationTest extends AbstractKarafIntegrationT
                 wrappedBundle(mavenBundle().groupId("junit").artifactId("junit").versionAsInProject()),
 
                 // Load domain model classes
-                wrappedBundle(mavenBundle().groupId("org.org.kie").artifactId("kie-karaf-itests-domain-model").versionAsInProject()),
+                wrappedBundle(mavenBundle().groupId("org.kie").artifactId("kie-karaf-itests-domain-model").versionAsInProject()),
 
                 // Create a bundle with META-INF/spring/kie-beans.xml - this should be processed automatically by Spring
                 streamBundle(bundle()
@@ -110,7 +125,7 @@ public class KieBlueprintImportIntegrationTest extends AbstractKarafIntegrationT
                         .set(Constants.BUNDLE_SYMBOLICNAME, "Test-Blueprint-Bundle")
                         .set(Constants.IMPORT_PACKAGE, "org.kie.aries.blueprint," +
                                 "org.osgi.service.blueprint.container," +
-                                "org.org.kie.karaf.itest.blueprint.domain," +
+                                "org.kie.karaf.itest.blueprint.domain," +
                                 "org.kie.aries.blueprint.factorybeans," +
                                 "org.kie.aries.blueprint.helpers," +
                                 "org.kie.api," +
@@ -119,7 +134,7 @@ public class KieBlueprintImportIntegrationTest extends AbstractKarafIntegrationT
                                 // junit is acting as a dependency for the rule
                                 "org.junit," +
                                 "*")
-                        .set(Constants.EXPORT_PACKAGE, "org.org.kie.karaf.itest.blueprint.domain")
+                        .set(Constants.EXPORT_PACKAGE, "org.kie.karaf.itest.blueprint.domain")
                         .set(Constants.BUNDLE_SYMBOLICNAME, "Test-Blueprint-Bundle")
                         .build()).start()
 

@@ -55,7 +55,6 @@
     <module>drools-rhq-plugin</module>
     <module>droolsjbpm-integration-examples</module>
     <module>jbpm-simulation</module>
-    <module>kie-remote</module>
     <module>kie-spring</module>
     <module>kie-aries-blueprint</module>
     <module>kie-eap-integration</module>
@@ -94,27 +93,9 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>org.uberfire</groupId>
-        <artifactId>uberfire-bom</artifactId>
-        <version>${version.org.uberfire}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.dashbuilder</groupId>
-        <artifactId>dashbuilder-bom</artifactId>
-        <version>${version.org.dashbuilder}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.errai.bom</groupId>
-        <artifactId>errai-internal-bom</artifactId>
-        <version>${version.org.jboss.errai}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
+
+
+
       <dependency>
         <groupId>org.kie</groupId>
         <artifactId>kie-karaf-itests-domain-model</artifactId>
