@@ -18,11 +18,13 @@ package org.kie.server.integrationtests.router;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.ExternalResource;
 import org.kie.api.KieServices;
+import org.kie.server.api.KieServerConstants;
 import org.kie.server.api.marshalling.MarshallingFormat;
 import org.kie.server.api.model.KieServerInfo;
 import org.kie.server.api.model.ServiceResponse;
@@ -82,7 +84,7 @@ public abstract class KieServerRouterBaseIntegrationTest extends RestJmsSharedBa
 
     protected String getServerUrl() {
 
-        return System.getProperty("org.kie.server.router", "http://localhost:" + TestConfig.getRouterAllocatedPort());
+        return System.getProperty(KieServerConstants.KIE_SERVER_ROUTER, "http://localhost:" + TestConfig.getRouterAllocatedPort());
     }
 
     @Override
@@ -92,7 +94,7 @@ public abstract class KieServerRouterBaseIntegrationTest extends RestJmsSharedBa
     }
 
 
-    @Before
+    @After
     public void abortAllProcesses() {
 
         // make sure we run via router
