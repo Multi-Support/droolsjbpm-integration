@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.jbpm.services.api.ProcessInstanceNotFoundException;
 import org.jbpm.services.api.RuntimeDataService;
+import org.jbpm.services.api.TaskNotFoundException;
 import org.jbpm.services.api.model.NodeInstanceDesc;
 import org.jbpm.services.api.model.ProcessDefinition;
 import org.jbpm.services.api.model.ProcessInstanceDesc;
@@ -50,6 +51,7 @@ import org.kie.server.api.model.instance.TaskInstance;
 import org.kie.server.api.model.instance.TaskSummaryList;
 import org.kie.server.api.model.instance.VariableInstanceList;
 import org.kie.server.services.api.KieServerRegistry;
+import org.kie.server.services.impl.locator.ContainerLocatorProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,7 @@ public class RuntimeDataServiceBase {
 
     private RuntimeDataService runtimeDataService;
     private IdentityProvider identityProvider;
+    private KieServerRegistry context;
 
     private boolean bypassAuthUser;
 
@@ -69,6 +72,7 @@ public class RuntimeDataServiceBase {
     public RuntimeDataServiceBase(RuntimeDataService delegate, KieServerRegistry context) {
         this.runtimeDataService = delegate;
         this.identityProvider = context.getIdentityProvider();
+        this.context = context;
 
         this.bypassAuthUser = Boolean.parseBoolean(context.getConfig().getConfigItemValue(KieServerConstants.CFG_BYPASS_AUTH_USER, "false"));
     }
@@ -286,7 +290,7 @@ public class RuntimeDataServiceBase {
 
 
     public ProcessDefinitionList getProcessesByDeploymentId(String containerId, Integer page, Integer pageSize, String sort, boolean sortOrder) {
-
+        containerId = context.getContainerId(containerId, ContainerLocatorProvider.get().getLocator());
         logger.debug("About to search for process definitions within container '{}' with page {} and page size {}", containerId, page, pageSize);
         if (sort == null || sort.isEmpty()) {
             sort = "ProcessName";
@@ -336,6 +340,7 @@ public class RuntimeDataServiceBase {
     }
 
     public org.kie.server.api.model.definition.ProcessDefinition getProcessesByDeploymentIdProcessId(String containerId, String processId) {
+        containerId = context.getContainerId(containerId, ContainerLocatorProvider.get().getLocator());
         ProcessDefinition processDesc = runtimeDataService.getProcessesByDeploymentIdProcessId(containerId, processId);
         if (processDesc == null) {
             throw new IllegalArgumentException("Could not find process definition \""+processId+"\" in container \""+containerId +"\"");
@@ -347,12 +352,20 @@ public class RuntimeDataServiceBase {
 
         UserTaskInstanceDesc userTaskDesc = runtimeDataService.getTaskByWorkItemId(workItemId);
 
+        if (userTaskDesc == null) {
+            throw new TaskNotFoundException("No task found with work item id " + workItemId);
+        }
+
         return convertToTask(userTaskDesc);
     }
 
     public TaskInstance getTaskById(long taskId) {
 
         UserTaskInstanceDesc userTaskDesc = runtimeDataService.getTaskById(taskId);
+
+        if (userTaskDesc == null) {
+            throw new TaskNotFoundException("No task found with id " + taskId);
+        }
 
         return convertToTask(userTaskDesc);
     }

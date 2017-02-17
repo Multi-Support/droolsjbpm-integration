@@ -40,15 +40,15 @@ import io.undertow.util.HttpString;
 
 public abstract class AbstractAggregateHttpHandler implements HttpHandler {
 
-    private static final Logger log = Logger.getLogger(AbstractAggregateHttpHandler.class);
+    protected static final Logger log = Logger.getLogger(AbstractAggregateHttpHandler.class);
 
-    private static final String REPLACE_PAGE =      "page=[^&]*";
-    private static final String REPLACE_PAGE_SIZE = "pageSize=[^&]*";
+    protected static final String REPLACE_PAGE =      "page=[^&]*";
+    protected static final String REPLACE_PAGE_SIZE = "pageSize=[^&]*";
 
-    private static final String DEFAULT_ACCEPT = "application/xml";
+    protected static final String DEFAULT_ACCEPT = "application/xml";
 
-    private HttpHandler httpHandler;
-    private AdminHttpHandler adminHandler;
+    protected HttpHandler httpHandler;
+    protected AdminHttpHandler adminHandler;
 
     private RoundRobinHostSelector selector = new RoundRobinHostSelector();
 
@@ -61,6 +61,7 @@ public abstract class AbstractAggregateHttpHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (!exchange.getRequestMethod().equals(HttpString.tryFromString("GET"))) {
             httpHandler.handleRequest(exchange);
+            return;
         }
         Map<String, Deque<String>> queryParams = exchange.getQueryParameters();
         // collect and alter paging
@@ -107,6 +108,11 @@ public abstract class AbstractAggregateHttpHandler implements HttpHandler {
                 .filter(msg -> msg != null && !msg.trim().isEmpty())
                 .collect(Collectors.toList());
 
+        if (returnResponses.isEmpty()) {
+            ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
+            return;
+        }
+
         HeaderValues accept = exchange.getRequestHeaders().get(Headers.ACCEPT);
         HeaderValues kieContentType = exchange.getRequestHeaders().get("X-KIE-ContentType");
 
@@ -125,10 +131,6 @@ public abstract class AbstractAggregateHttpHandler implements HttpHandler {
         responseHeaders.forEach((name, value) -> {
             exchange.getResponseHeaders().putAll(HttpString.tryFromString(name), value);
         });
-        if (response == null) {
-            ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
-            return;
-        }
 
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, response.getBytes("UTF-8").length);
         exchange.getResponseSender().send(response);
@@ -173,8 +175,8 @@ public abstract class AbstractAggregateHttpHandler implements HttpHandler {
 
         return adminHandler.getHostsPerServer().values().stream().map(hosts -> {
             return selector.selectHost(hosts.toArray(new String[hosts.size()]));
-        })
-                .collect(Collectors.toSet());
+        }).filter(host -> host != null)
+         .collect(Collectors.toSet());
     }
 
     protected boolean supportAdvancedAggregate() {
@@ -187,6 +189,9 @@ public abstract class AbstractAggregateHttpHandler implements HttpHandler {
 
 
         public String selectHost(String[] availableHosts) {
+            if (availableHosts.length == 0) {
+                return null;
+            }
             int hostIndex = currentHost.incrementAndGet() % availableHosts.length;
 
             return availableHosts[hostIndex];

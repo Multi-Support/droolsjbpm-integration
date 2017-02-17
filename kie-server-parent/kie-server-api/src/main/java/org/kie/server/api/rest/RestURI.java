@@ -72,6 +72,7 @@ public class RestURI {
     // admin URIs
     public static final String ADMIN_PROCESS_URI = "admin/containers/{" + CONTAINER_ID + "}/processes";
     public static final String ADMIN_TASK_URI = "admin/containers/{" + CONTAINER_ID + "}/tasks";
+    public static final String ADMIN_CASE_URI = "admin/cases";
 
     // uris
     // process related prefixed by PROCESS_URI
@@ -87,6 +88,8 @@ public class RestURI {
     public static final String PROCESS_INSTANCE_VAR_GET_URI = "instances/{" + PROCESS_INST_ID + "}/variable/{" + VAR_NAME + "}";
     public static final String PROCESS_INSTANCE_VARS_GET_URI = "instances/{" + PROCESS_INST_ID + "}/variables";
     public static final String PROCESS_INSTANCE_SIGNALS_GET_URI = "instances/{" + PROCESS_INST_ID + "}/signals";
+    public static final String PROCESS_INSTANCES_BY_CONTAINER_GET_URI = "processes/instances";
+    public static final String PROCESS_INSTANCES_BY_PARENT_GET_URI = "instances/{" + PROCESS_INST_ID + "}/processes";
 
     public static final String PROCESS_INSTANCE_WORK_ITEM_COMPLETE_PUT_URI = "instances/{" + PROCESS_INST_ID + "}/workitems/{" + WORK_ITEM_ID +"}/completed";
     public static final String PROCESS_INSTANCE_WORK_ITEM_ABORT_PUT_URI = "instances/{" + PROCESS_INST_ID + "}/workitems/{" + WORK_ITEM_ID +"}/aborted";
@@ -174,6 +177,8 @@ public class RestURI {
     public static final String TASK_INSTANCE_ATTACHMENT_DELETE_URI = "{" + TASK_INSTANCE_ID + "}/attachments/{" + ATTACHMENT_ID + "}";
 
     public static final String TASK_INSTANCE_GET_URI = "{" + TASK_INSTANCE_ID + "}";
+
+    public static final String TASK_INSTANCE_EVENTS_GET_URI = "{" + TASK_INSTANCE_ID + "}/events";
 
     // job executor prefixed by JOB_URI
     public static final String CANCEL_JOB_DEL_URI = "{" + JOB_ID + "}";
@@ -274,6 +279,9 @@ public class RestURI {
     public static final String CASE_TASKS_AS_POT_OWNER_GET_URI = "instances/{" + CASE_ID + "}/tasks/instances/pot-owners";
     public static final String CASE_TASKS_AS_ADMIN_GET_URI = "instances/{" + CASE_ID + "}/tasks/instances/admins";
     public static final String CASE_TASKS_AS_STAKEHOLDER_GET_URI = "instances/{" + CASE_ID + "}/tasks/instances/stakeholders";
+    public static final String CASE_INSTANCES_BY_ROLE_GET_URI = "{" + CASE_ROLE_NAME + "}/instances";
+    public static final String CASE_ALL_PROCESSES_INSTANCES_GET_URI = "processes";
+    public static final String CASE_PROCESSES_BY_CONTAINER_INSTANCES_GET_URI = "{" + CONTAINER_ID + "}/processes";
 
 
     public static String build(String baseUrl, String template, Map<String, Object> parameters) {

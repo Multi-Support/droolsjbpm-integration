@@ -20,6 +20,11 @@
     Drools and jBPM integration with seam, spring, camel, ...
   </description>
 
+  <properties>
+    <enforcer.failOnDuplicatedClasses>true</enforcer.failOnDuplicatedClasses>
+    <findbugs.failOnViolation>true</findbugs.failOnViolation>
+  </properties>
+
   <repositories>
     <!-- Bootstrap repository to locate the parent pom when the parent pom has not been build locally. -->
     <repository>
@@ -93,7 +98,13 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-
+      <dependency>
+        <groupId>org.kie</groupId>
+        <artifactId>kie-dmn-bom</artifactId>
+        <version>${version.org.kie}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
 
 
       <dependency>

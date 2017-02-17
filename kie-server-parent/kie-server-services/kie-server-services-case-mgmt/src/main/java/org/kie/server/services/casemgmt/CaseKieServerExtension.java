@@ -22,6 +22,7 @@ import java.util.ServiceLoader;
 
 import org.jbpm.casemgmt.api.CaseRuntimeDataService;
 import org.jbpm.casemgmt.api.generator.CaseIdGenerator;
+import org.jbpm.casemgmt.impl.AuthorizationManagerImpl;
 import org.jbpm.casemgmt.impl.CaseRuntimeDataServiceImpl;
 import org.jbpm.casemgmt.impl.CaseServiceImpl;
 import org.jbpm.casemgmt.impl.event.CaseConfigurationDeploymentListener;
@@ -109,7 +110,7 @@ public class CaseKieServerExtension implements KieServerExtension {
                 continue;
             }
         }
-        CaseIdGenerator caseIdGenerator = new TableCaseIdGenerator(new TransactionalCommandService(EntityManagerFactoryManager.get().getOrCreate(persistenceUnitName)));
+        CaseIdGenerator caseIdGenerator = getCaseIdGenerator();
 
         // build case runtime data service
         CaseRuntimeDataServiceImpl caseRuntimeDataService = new CaseRuntimeDataServiceImpl();
@@ -126,6 +127,8 @@ public class CaseKieServerExtension implements KieServerExtension {
         ((CaseServiceImpl) caseService).setDeploymentService(deploymentService);
         ((CaseServiceImpl) caseService).setRuntimeDataService(runtimeDataService);
         ((CaseServiceImpl) caseService).setCommandService(new TransactionalCommandService(EntityManagerFactoryManager.get().getOrCreate(persistenceUnitName)));
+        ((CaseServiceImpl) caseService).setAuthorizationManager(new AuthorizationManagerImpl(registry.getIdentityProvider(),
+                new TransactionalCommandService(EntityManagerFactoryManager.get().getOrCreate(persistenceUnitName))));
 
         // build case configuration on deployment listener
         CaseConfigurationDeploymentListener configurationListener = new CaseConfigurationDeploymentListener();
@@ -143,6 +146,24 @@ public class CaseKieServerExtension implements KieServerExtension {
         this.kieContainerCommandService = new CaseKieContainerCommandServiceImpl(registry, caseManagementServiceBase, caseManagementRuntimeDataService);
 
         initialized = true;
+    }
+
+    private CaseIdGenerator getCaseIdGenerator() {
+        String selectedGenerator = System.getProperty(KieServerConstants.CFG_CASE_ID_GENERATOR);
+
+        if (selectedGenerator == null) {
+            return new TableCaseIdGenerator(new TransactionalCommandService(EntityManagerFactoryManager.get().getOrCreate(persistenceUnitName)));
+        }
+
+        ServiceLoader<CaseIdGenerator> generators = ServiceLoader.load(CaseIdGenerator.class);
+
+        for (CaseIdGenerator generator : generators) {
+            if (generator.getIdentifier().equals(selectedGenerator))  {
+                return generator;
+            }
+        }
+
+        throw new IllegalStateException("Unable to find case id generator identified by " + selectedGenerator);
     }
 
     @Override

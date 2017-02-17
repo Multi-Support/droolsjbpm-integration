@@ -42,6 +42,8 @@ import org.kie.server.api.model.cases.CaseRoleAssignment;
 import org.kie.server.api.model.cases.CaseRoleAssignmentList;
 import org.kie.server.api.model.cases.CaseStage;
 import org.kie.server.api.model.cases.CaseStageList;
+import org.kie.server.api.model.definition.ProcessDefinition;
+import org.kie.server.api.model.definition.ProcessDefinitionList;
 import org.kie.server.api.model.instance.NodeInstance;
 import org.kie.server.api.model.instance.NodeInstanceList;
 import org.kie.server.api.model.instance.ProcessInstance;
@@ -532,6 +534,39 @@ public class CaseServicesClientImpl extends AbstractKieServicesClientImpl implem
     }
 
     @Override
+    public List<NodeInstance> getCompletedNodes(String containerId, String caseId, Integer page, Integer pageSize) {
+        NodeInstanceList list = null;
+        if( config.isRest() ) {
+            Map<String, Object> valuesMap = new HashMap<String, Object>();
+            valuesMap.put(CONTAINER_ID, containerId);
+            valuesMap.put(CASE_ID, caseId);
+
+            String queryString = getPagingQueryString("?completed=true", page, pageSize);
+
+            list = makeHttpGetRequestAndCreateCustomResponse(
+                    build(loadBalancer.getUrl(), CASE_URI + "/" + CASE_NODE_INSTANCES_GET_URI, valuesMap) + queryString, NodeInstanceList.class);
+
+        } else {
+            CommandScript script = new CommandScript( Collections.singletonList(
+                    (KieServerCommand) new DescriptorCommand("CaseQueryService", "getCompletedNodes", new Object[]{containerId, caseId, page, pageSize})) );
+            ServiceResponse<NodeInstanceList> response = (ServiceResponse<NodeInstanceList>)
+                    executeJmsCommand( script, DescriptorCommand.class.getName(), KieServerConstants.CAPABILITY_CASE ).getResponses().get(0);
+
+            throwExceptionOnFailure(response);
+            if (shouldReturnWithNullResponse(response)) {
+                return null;
+            }
+            list = response.getResult();
+        }
+
+        if (list != null) {
+            return list.getItems();
+        }
+
+        return Collections.emptyList();
+    }
+
+    @Override
     public List<ProcessInstance> getActiveProcessInstances(String containerId, String caseId, Integer page, Integer pageSize) {
         return getProcessInstances(containerId, caseId, null, page, pageSize);
     }
@@ -728,7 +763,7 @@ public class CaseServicesClientImpl extends AbstractKieServicesClientImpl implem
 
         } else {
             CommandScript script = new CommandScript( Collections.singletonList(
-                    (KieServerCommand) new DescriptorCommand("CaseQueryService", "getCaseInstances", new Object[]{safeList(status), page, pageSize, sort, sortOrder})) );
+                    (KieServerCommand) new DescriptorCommand("CaseQueryService", "getCaseInstancesAnyRole", new Object[]{safeList(status), page, pageSize, sort, sortOrder})) );
             ServiceResponse<CaseInstanceList> response = (ServiceResponse<CaseInstanceList>)
                     executeJmsCommand( script, DescriptorCommand.class.getName(), KieServerConstants.CAPABILITY_CASE ).getResponses().get(0);
 
@@ -1121,6 +1156,116 @@ public class CaseServicesClientImpl extends AbstractKieServicesClientImpl implem
 
         if (result != null && result.getTasks() != null) {
             return Arrays.asList(result.getTasks());
+        }
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcesses(Integer page, Integer pageSize) {
+        return findProcesses(page, pageSize, "", true);
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcesses(String filter, Integer page, Integer pageSize) {
+        return findProcesses(filter, page, pageSize, "", true);
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcessesByContainerId(String containerId, Integer page, Integer pageSize) {
+        return findProcessesByContainerId(containerId, page, pageSize, "", true);
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcesses(Integer page, Integer pageSize, String sort, boolean sortOrder) {
+        ProcessDefinitionList result = null;
+        if( config.isRest() ) {
+            Map<String, Object> valuesMap = new HashMap<String, Object>();
+
+            String queryString = getPagingQueryString("?sort="+sort+"&sortOrder="+sortOrder, page, pageSize);
+
+            result = makeHttpGetRequestAndCreateCustomResponse(
+                    build(loadBalancer.getUrl(), CASE_QUERY_URI + "/" + CASE_ALL_PROCESSES_INSTANCES_GET_URI, valuesMap) + queryString, ProcessDefinitionList.class);
+
+        } else {
+            CommandScript script = new CommandScript( Collections.singletonList( (KieServerCommand)
+                    new DescriptorCommand( "CaseQueryService", "getProcessDefinitions", new Object[]{"", "", page, pageSize, sort, sortOrder}) ) );
+            ServiceResponse<ProcessDefinitionList> response = (ServiceResponse<ProcessDefinitionList>)
+                    executeJmsCommand( script, DescriptorCommand.class.getName(), KieServerConstants.CAPABILITY_CASE ).getResponses().get(0);
+
+            throwExceptionOnFailure(response);
+            if (shouldReturnWithNullResponse(response)) {
+                return null;
+            }
+            result = response.getResult();
+        }
+
+        if (result != null && result.getProcesses() != null) {
+            return Arrays.asList(result.getProcesses());
+        }
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcesses(String filter, Integer page, Integer pageSize, String sort, boolean sortOrder) {
+        ProcessDefinitionList result = null;
+        if( config.isRest() ) {
+            Map<String, Object> valuesMap = new HashMap<String, Object>();
+
+            String queryString = getPagingQueryString("?filter=" + filter+"&sort="+sort+"&sortOrder="+sortOrder, page, pageSize);
+
+            result = makeHttpGetRequestAndCreateCustomResponse(
+                    build(loadBalancer.getUrl(), CASE_QUERY_URI + "/" + CASE_ALL_PROCESSES_INSTANCES_GET_URI, valuesMap) + queryString, ProcessDefinitionList.class);
+
+        } else {
+            CommandScript script = new CommandScript( Collections.singletonList( (KieServerCommand)
+                    new DescriptorCommand( "CaseQueryService", "getProcessDefinitions", new Object[]{filter, "", page, pageSize, sort, sortOrder}) ) );
+            ServiceResponse<ProcessDefinitionList> response = (ServiceResponse<ProcessDefinitionList>)
+                    executeJmsCommand( script, DescriptorCommand.class.getName(), KieServerConstants.CAPABILITY_CASE ).getResponses().get(0);
+
+            throwExceptionOnFailure(response);
+            if (shouldReturnWithNullResponse(response)) {
+                return null;
+            }
+            result = response.getResult();
+        }
+
+        if (result != null && result.getProcesses() != null) {
+            return Arrays.asList(result.getProcesses());
+        }
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<ProcessDefinition> findProcessesByContainerId(String containerId, Integer page, Integer pageSize, String sort, boolean sortOrder) {
+        ProcessDefinitionList result = null;
+        if( config.isRest() ) {
+            Map<String, Object> valuesMap = new HashMap<String, Object>();
+            valuesMap.put(CONTAINER_ID, containerId);
+
+            String queryString = getPagingQueryString("?sort="+sort+"&sortOrder="+sortOrder, page, pageSize);
+
+            result = makeHttpGetRequestAndCreateCustomResponse(
+                    build(loadBalancer.getUrl(), CASE_QUERY_URI + "/" + CASE_PROCESSES_BY_CONTAINER_INSTANCES_GET_URI, valuesMap) + queryString, ProcessDefinitionList.class);
+
+
+        } else {
+            CommandScript script = new CommandScript( Collections.singletonList( (KieServerCommand)
+                    new DescriptorCommand( "CaseQueryService", "getProcessDefinitions", new Object[]{"", containerId, page, pageSize, sort, sortOrder}) ) );
+            ServiceResponse<ProcessDefinitionList> response = (ServiceResponse<ProcessDefinitionList>)
+                    executeJmsCommand( script, DescriptorCommand.class.getName(), KieServerConstants.CAPABILITY_CASE ).getResponses().get(0);
+
+            throwExceptionOnFailure(response);
+            if (shouldReturnWithNullResponse(response)) {
+                return null;
+            }
+            result = response.getResult();
+        }
+
+        if (result != null && result.getProcesses() != null) {
+            return Arrays.asList(result.getProcesses());
         }
 
         return Collections.emptyList();

@@ -15,11 +15,11 @@
  */
 package org.kie.server.integrationtests.shared;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
 
 import org.kie.api.command.Command;
 import org.kie.api.executor.STATUS;
@@ -41,6 +41,7 @@ import org.kie.server.api.model.instance.SolverInstanceList;
 import org.kie.server.api.model.instance.TaskInstance;
 import org.kie.server.client.JobServicesClient;
 import org.kie.server.client.KieServicesClient;
+import org.kie.server.client.KieServicesException;
 import org.kie.server.client.ProcessServicesClient;
 import org.kie.server.client.QueryServicesClient;
 import org.kie.server.client.RuleServicesClient;
@@ -105,10 +106,14 @@ public class KieServerSynchronization {
     }
 
     public static void waitForProcessInstanceStart(final QueryServicesClient queryClient, final String containerId) throws Exception {
-        waitForCondition(() -> {
-            List<ProcessInstance> processInstances = queryClient.findProcessInstances(0, 100);
+        waitForProcessInstanceStart(queryClient, containerId, 1, Arrays.asList(1));
+    }
 
-            if (processInstances.size() == 1) {
+    public static void waitForProcessInstanceStart(final QueryServicesClient queryClient, final String containerId, int expectedInstances, List<Integer> statuses) throws Exception {
+        waitForCondition(() -> {
+            List<ProcessInstance> processInstances = queryClient.findProcessInstancesByStatus(statuses, 0, 100);
+
+            if (processInstances.size() == expectedInstances) {
                 return true;
             }
             return false;
@@ -193,19 +198,27 @@ public class KieServerSynchronization {
     }
 
     public static void waitForQuery(final QueryServicesClient client, final QueryDefinition query) throws Exception {
-        waitForCondition(() -> !client.getQueries(0, 10).stream()
-                .filter(q -> query.getName().equals(q.getName()) && query.getExpression().equals(q.getExpression()))
-                .collect(Collectors.toList())
-                .isEmpty()
-        );
+        waitForCondition(() -> {
+            try {
+                QueryDefinition q = client.getQuery(query.getName());
+                return query.getExpression().equals(q.getExpression());
+            } catch (KieServicesException e) {
+                // Query isn't created yet
+                return false;
+            }
+        });
     }
 
     public static void waitForQueryRemoval(final QueryServicesClient client, final QueryDefinition query) throws Exception {
-        waitForCondition(() -> client.getQueries(0, 10).stream()
-                .filter(q -> query.getName().equals(q.getName()))
-                .collect(Collectors.toList())
-                .isEmpty()
-        );
+        waitForCondition(() -> {
+            try {
+                client.getQuery(query.getName());
+                return false;
+            } catch (KieServicesException e) {
+                // Query doesn't exist any more
+                return true;
+            }
+        });
     }
 
     /**

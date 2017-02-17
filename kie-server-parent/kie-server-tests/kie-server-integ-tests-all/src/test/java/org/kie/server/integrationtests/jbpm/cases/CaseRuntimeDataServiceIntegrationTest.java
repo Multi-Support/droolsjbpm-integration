@@ -37,6 +37,7 @@ import org.kie.server.api.model.cases.CaseInstance;
 import org.kie.server.api.model.cases.CaseMilestone;
 import org.kie.server.api.model.cases.CaseRoleAssignment;
 import org.kie.server.api.model.cases.CaseStage;
+import org.kie.server.api.model.definition.ProcessDefinition;
 import org.kie.server.api.model.instance.NodeInstance;
 import org.kie.server.api.model.instance.TaskSummary;
 import org.kie.server.client.CaseServicesClient;
@@ -898,6 +899,10 @@ public class CaseRuntimeDataServiceIntegrationTest extends JbpmKieServerBaseInte
         assertNotNull(activeNode);
         assertEquals("Hello1", activeNode.getName());
 
+        List<NodeInstance> completedNodes = caseClient.getCompletedNodes(CONTAINER_ID, caseId, 0, 10);
+        assertNotNull(completedNodes);
+        assertEquals(0, completedNodes.size());
+
         List<org.kie.server.api.model.instance.ProcessInstance> instances = caseClient.getActiveProcessInstances(CONTAINER_ID, caseId, 0, 10);
         assertNotNull(instances);
         assertEquals(1, instances.size());
@@ -927,6 +932,15 @@ public class CaseRuntimeDataServiceIntegrationTest extends JbpmKieServerBaseInte
         assertTrue(nodeNames.contains("[Dynamic] dynamic task"));
         assertTrue(nodeNames.contains("Hello1"));
 
+        taskClient.completeAutoProgress(CONTAINER_ID, task.getId(), USER_YODA, null);
+
+        completedNodes = caseClient.getCompletedNodes(CONTAINER_ID, caseId, 0, 10);
+        assertNotNull(completedNodes);
+        assertEquals(1, completedNodes.size());
+
+        NodeInstance completedNode = activeNodes.get(0);
+        assertNotNull(completedNode);
+        assertEquals("Hello1", completedNode.getName());
 
         caseClient.addDynamicSubProcess(CONTAINER_ID, caseId, "DataVerification", parameters);
 
@@ -1274,12 +1288,15 @@ public class CaseRuntimeDataServiceIntegrationTest extends JbpmKieServerBaseInte
         assertNotNull(instances);
         assertEquals(1, instances.size());
 
+        changeUser(USER_YODA);
         caseClient.destroyCaseInstance(CONTAINER_ID, caseId);
         caseClient.destroyCaseInstance(CONTAINER_ID, caseId2);
     }
 
     @Test
-    public void testGetCaseTasksAsStakeholder() {
+    public void testGetCaseTasksAsStakeholder() throws Exception {
+        // Test is using user authentication, isn't available for local execution(which has mocked authentication info).
+        Assume.assumeFalse(TestConfig.isLocalServer());
         String caseId = startUserTaskCase(USER_JOHN, USER_YODA);
 
         assertNotNull(caseId);
@@ -1314,8 +1331,87 @@ public class CaseRuntimeDataServiceIntegrationTest extends JbpmKieServerBaseInte
         assertNotNull(tasks);
         assertEquals(1, tasks.size());
 
+        changeUser(USER_JOHN);
         caseClient.destroyCaseInstance(CONTAINER_ID, caseId);
 
+    }
+
+    @Test
+    public void testCaseInstanceAuthorization() throws Exception {
+        String caseId = startUserTaskCase(USER_YODA, USER_JOHN);
+
+        assertNotNull(caseId);
+        assertTrue(caseId.startsWith(CASE_HR_ID_PREFIX));
+
+        changeUser(USER_JOHN);
+
+        try {
+            caseClient.cancelCaseInstance(CONTAINER_ID, caseId);
+            fail("User john is not an owner so is not allowed to cancel case instance");
+        } catch (KieServicesException e) {
+            String errorMessage = e.getMessage();
+            assertTrue(errorMessage.contains("User " + USER_JOHN +" is not authorized"));
+        }
+        try {
+            caseClient.destroyCaseInstance(CONTAINER_ID, caseId);
+            fail("User john is not an owner so is not allowed to destroy case instance");
+        } catch (KieServicesException e) {
+            String errorMessage = e.getMessage();
+            assertTrue(errorMessage.contains("User " + USER_JOHN +" is not authorized"));
+        }
+
+        changeUser(USER_YODA);
+
+        caseClient.cancelCaseInstance(CONTAINER_ID, caseId);
+
+        caseClient.destroyCaseInstance(CONTAINER_ID, caseId);
+    }
+
+    @Test
+    public void testGetProcessDefinitionsByContainer() {
+        List<ProcessDefinition> definitions = caseClient.findProcessesByContainerId(CONTAINER_ID, 0, 10);
+        assertNotNull(definitions);
+        assertEquals(2, definitions.size());
+
+        List<String> mappedDefinitions = definitions.stream().map(ProcessDefinition::getId).collect(Collectors.toList());
+        assertTrue(mappedDefinitions.contains("DataVerification"));
+        assertTrue(mappedDefinitions.contains("hiring"));
+
+        definitions = caseClient.findProcessesByContainerId(CONTAINER_ID, 0, 1);
+        assertNotNull(definitions);
+        assertEquals(1, definitions.size());
+        assertEquals("DataVerification", definitions.get(0).getId());
+
+        definitions = caseClient.findProcessesByContainerId(CONTAINER_ID, 1, 1);
+        assertNotNull(definitions);
+        assertEquals(1, definitions.size());
+        assertEquals("hiring", definitions.get(0).getId());
+
+        definitions = caseClient.findProcessesByContainerId(CONTAINER_ID, 0, 1, CaseServicesClient.SORT_BY_PROCESS_NAME, false);
+        assertNotNull(definitions);
+        assertEquals(1, definitions.size());
+        assertEquals("hiring", definitions.get(0).getId());
+    }
+
+    @Test
+    public void testGetProcessDefinitions() {
+        List<ProcessDefinition> definitions = caseClient.findProcesses("hir", 0, 10);
+        assertNotNull(definitions);
+        assertEquals(1, definitions.size());
+        assertEquals("hiring", definitions.get(0).getId());
+
+        definitions = caseClient.findProcesses(0, 1, CaseServicesClient.SORT_BY_PROCESS_NAME, false);
+        assertNotNull(definitions);
+        assertEquals(1, definitions.size());
+        assertEquals("hiring", definitions.get(0).getId());
+
+        definitions = caseClient.findProcesses(0, 10);
+        assertNotNull(definitions);
+        assertEquals(2, definitions.size());
+
+        List<String> mappedDefinitions = definitions.stream().map(ProcessDefinition::getId).collect(Collectors.toList());
+        assertTrue(mappedDefinitions.contains("DataVerification"));
+        assertTrue(mappedDefinitions.contains("hiring"));
     }
 
     private String startUserTaskCase(String owner, String contact) {

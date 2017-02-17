@@ -45,11 +45,21 @@
           <groupId>org.eclipse.sisu</groupId>
           <artifactId>org.eclipse.sisu.inject</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.sisu</groupId>
+          <artifactId>org.eclipse.sisu.plexus</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.sisu</groupId>
+          <artifactId>org.eclipse.sisu.plexus</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
@@ -69,12 +79,17 @@
       <artifactId>plexus-container-default</artifactId>
       <exclusions>
         <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging-api</artifactId>
         </exclusion>
+        <!-- Superseded by Guava-->
         <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
+          <groupId>com.google.collections</groupId>
+          <artifactId>google-collections</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -165,6 +180,11 @@
       <artifactId>optaplanner-core</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.kie</groupId>
+      <artifactId>kie-dmn-core</artifactId>
+      <scope>runtime</scope>
+    </dependency>
 
 <!-- Was added to support log on Maven 3.0.5 but now old; if this dep is missing, when running takari for maven 3.0.5 the log might be missing some lines from the internal classes logging.
      Also could be handy for temporarily turn on debug output of the inner classes while performing tests using the takari framework.
@@ -180,6 +200,12 @@
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-compat</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.sisu</groupId>
+          <artifactId>org.eclipse.sisu.plexus</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.takari.maven.plugins</groupId>
@@ -190,11 +216,6 @@
       <groupId>io.takari.maven.plugins</groupId>
       <artifactId>takari-plugin-integration-testing</artifactId>
       <type>pom</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
 

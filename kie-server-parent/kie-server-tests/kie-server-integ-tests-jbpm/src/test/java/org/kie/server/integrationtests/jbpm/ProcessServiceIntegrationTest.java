@@ -17,6 +17,7 @@ package org.kie.server.integrationtests.jbpm;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.kie.internal.executor.api.STATUS;
 import org.kie.internal.process.CorrelationKey;
 import org.kie.internal.process.CorrelationKeyFactory;
 import org.kie.server.api.model.ReleaseId;
+import org.kie.server.api.model.instance.NodeInstance;
 import org.kie.server.api.model.instance.ProcessInstance;
 import org.kie.server.api.model.instance.RequestInfoInstance;
 import org.kie.server.api.model.instance.TaskInstance;
@@ -452,7 +454,7 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
 
             TaskInstance userTask = taskClient.findTaskById(taskSummary.getId());
             assertNotNull(userTask);
-            assertEquals("Evaluate items", userTask.getName());
+            assertEquals("Evaluate items?", userTask.getName());
             assertEquals(Status.Completed.toString(), userTask.getStatus());
 
             List<WorkItemInstance> workItems = processClient.getWorkItemByProcessInstance(CONTAINER_ID, processInstanceId);
@@ -486,9 +488,9 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
 
             processClient.abortWorkItem(CONTAINER_ID, processInstanceId, workItemInstance.getId());
 
-            workItems = processClient.getWorkItemByProcessInstance(CONTAINER_ID, processInstanceId);
-            assertNotNull(workItems);
-            assertEquals(0, workItems.size());
+            ProcessInstance processInstance = processClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+            assertNotNull(processInstance);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, processInstance.getState().intValue());
 
         } catch (Exception e){
             processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
@@ -521,7 +523,7 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
 
             TaskInstance userTask = taskClient.findTaskById(taskSummary.getId());
             assertNotNull(userTask);
-            assertEquals("Evaluate items", userTask.getName());
+            assertEquals("Evaluate items?", userTask.getName());
             assertEquals(Status.Completed.toString(), userTask.getStatus());
 
             List<WorkItemInstance> workItems = processClient.getWorkItemByProcessInstance(CONTAINER_ID, processInstanceId);
@@ -533,9 +535,9 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
 
             processClient.completeWorkItem(CONTAINER_ID, processInstanceId, workItemInstance.getId(), parameters);
 
-            workItems = processClient.getWorkItemByProcessInstance(CONTAINER_ID, processInstanceId);
-            assertNotNull(workItems);
-            assertEquals(0, workItems.size());
+            ProcessInstance processInstance = processClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+            assertNotNull(processInstance);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_COMPLETED, processInstance.getState().intValue());
 
         } catch (Exception e){
             processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
@@ -707,6 +709,125 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
         }
     }
 
+    @Test
+    public void testGetNodeInstances() throws Exception {
+        Map<String, Object> parameters = new HashMap<String, Object>();
+        parameters.put("stringData", "waiting for signal");
+        parameters.put("personData", createPersonInstance(USER_JOHN));
+
+        Long processInstanceId = processClient.startProcess(CONTAINER_ID, PROCESS_ID_USERTASK, parameters);
+
+        try {
+            List<NodeInstance> instances = processClient.findActiveNodeInstances(CONTAINER_ID, processInstanceId, 0, 10);
+            assertNotNull(instances);
+            assertEquals(1, instances.size());
+
+            NodeInstance expectedFirstTask = NodeInstance
+                    .builder()
+                    .name("First task")
+                    .containerId(CONTAINER_ID)
+                    .nodeType("HumanTaskNode")
+                    .completed(false)
+                    .processInstanceId(processInstanceId)
+                    .build();
+
+            NodeInstance nodeInstance = instances.get(0);
+            assertNodeInstance(expectedFirstTask, nodeInstance);
+            assertNotNull(nodeInstance.getWorkItemId());
+            assertNotNull(nodeInstance.getDate());
+
+            instances = processClient.findCompletedNodeInstances(CONTAINER_ID, processInstanceId, 0, 10);
+            assertNotNull(instances);
+            assertEquals(1, instances.size());
+
+            NodeInstance expectedStart = NodeInstance
+                    .builder()
+                    .name("start")
+                    .containerId(CONTAINER_ID)
+                    .nodeType("StartNode")
+                    .completed(true)
+                    .processInstanceId(processInstanceId)
+                    .build();
+
+            nodeInstance = instances.get(0);
+            assertNodeInstance(expectedStart, nodeInstance);
+            assertNull(nodeInstance.getWorkItemId());
+            assertNotNull(nodeInstance.getDate());
+
+            instances = processClient.findNodeInstances(CONTAINER_ID, processInstanceId, 0, 10);
+            assertNotNull(instances);
+            assertEquals(3, instances.size());
+
+            nodeInstance = instances.get(0);
+            assertNodeInstance(expectedStart, nodeInstance);
+            assertNull(nodeInstance.getWorkItemId());
+            assertNotNull(nodeInstance.getDate());
+
+            nodeInstance = instances.get(1);
+            assertNodeInstance(expectedFirstTask, nodeInstance);
+            assertNotNull(nodeInstance.getWorkItemId());
+            assertNotNull(nodeInstance.getDate());
+
+            nodeInstance = instances.get(2);
+            expectedStart.setCompleted(false);
+            assertNodeInstance(expectedStart, nodeInstance);
+            assertNull(nodeInstance.getWorkItemId());
+            assertNotNull(nodeInstance.getDate());
+        } finally {
+            processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+        }
+    }
+
+    @Test
+    public void testCallActivityProcess() {
+        Map<String, Object> parameters = new HashMap<String, Object>();
+
+        Long processInstanceId = processClient.startProcess(CONTAINER_ID, PROCESS_ID_CALL_EVALUATION, parameters);
+        try {
+            assertNotNull(processInstanceId);
+            assertTrue(processInstanceId.longValue() > 0);
+
+            // Process instance is running and is active.
+            ProcessInstance processInstance = processClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+            assertNotNull(processInstance);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ACTIVE, processInstance.getState().intValue());
+
+            List<TaskSummary> tasks = taskClient.findTasksAssignedAsPotentialOwner(USER_YODA, 0, 10);
+            assertEquals(1, tasks.size());
+
+            taskClient.completeAutoProgress(CONTAINER_ID, tasks.get(0).getId(), USER_YODA, null);
+
+            List<ProcessInstance> instances = processClient.findProcessInstancesByParent(CONTAINER_ID, processInstanceId, 0, 10);
+            assertEquals(1, instances.size());
+
+            ProcessInstance childInstance = instances.get(0);
+            assertNotNull(childInstance);
+            assertEquals(PROCESS_ID_EVALUATION, childInstance.getProcessId());
+            assertEquals(processInstanceId, childInstance.getParentId());
+
+            processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+
+            // Process instance is now aborted.
+            processInstance = processClient.getProcessInstance(CONTAINER_ID, processInstanceId);
+            assertNotNull(processInstance);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ABORTED, processInstance.getState().intValue());
+
+            processInstance = processClient.getProcessInstance(CONTAINER_ID, childInstance.getId());
+            assertNotNull(processInstance);
+            assertEquals(org.kie.api.runtime.process.ProcessInstance.STATE_ABORTED, processInstance.getState().intValue());
+
+            // no more active instances
+            instances = processClient.findProcessInstancesByParent(CONTAINER_ID, processInstanceId, 0, 10);
+            assertEquals(0, instances.size());
+
+            instances = processClient.findProcessInstancesByParent(CONTAINER_ID, processInstanceId, Arrays.asList(3), 0, 10);
+            assertEquals(1, instances.size());
+        } catch (Exception e) {
+            processClient.abortProcessInstance(CONTAINER_ID, processInstanceId);
+            fail(e.getMessage());
+        }
+    }
+
     private ProcessInstance createSignalProcessInstance(Long processInstanceId) {
         return ProcessInstance.builder()
                 .id(processInstanceId)
@@ -748,6 +869,15 @@ public class ProcessServiceIntegrationTest extends JbpmKieServerBaseIntegrationT
         assertEquals(expected.getParentId(), actual.getParentId());
         assertNotNull(actual.getCorrelationKey());
         assertNotNull(actual.getDate());
+    }
+
+    private void assertNodeInstance(NodeInstance expected, NodeInstance actual) {
+        assertNotNull(actual);
+        assertEquals(expected.getName(), actual.getName());
+        assertEquals(expected.getContainerId(), actual.getContainerId());
+        assertEquals(expected.getNodeType(), actual.getNodeType());
+        assertEquals(expected.getCompleted(), actual.getCompleted());
+        assertEquals(expected.getProcessInstanceId(), actual.getProcessInstanceId());
     }
 
     private void checkAvailableSignals(String containerId, Long processInstanceId) {

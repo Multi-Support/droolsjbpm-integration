@@ -15,16 +15,17 @@
 
 package org.kie.server.client.impl;
 
-import java.net.ConnectException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
@@ -35,10 +36,6 @@ import javax.jms.TextMessage;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.kie.server.client.KieServicesHttpException;
-import org.kie.server.common.rest.KieServerHttpRequest;
-import org.kie.server.common.rest.KieServerHttpRequestException;
-import org.kie.server.common.rest.KieServerHttpResponse;
 import org.kie.server.api.KieServerConstants;
 import org.kie.server.api.commands.CommandScript;
 import org.kie.server.api.jms.JMSConstants;
@@ -50,8 +47,12 @@ import org.kie.server.api.model.ServiceResponse;
 import org.kie.server.api.model.ServiceResponsesList;
 import org.kie.server.client.KieServicesConfiguration;
 import org.kie.server.client.KieServicesException;
+import org.kie.server.client.KieServicesHttpException;
 import org.kie.server.client.balancer.LoadBalancer;
 import org.kie.server.client.jms.ResponseHandler;
+import org.kie.server.common.rest.KieServerHttpRequest;
+import org.kie.server.common.rest.KieServerHttpRequestException;
+import org.kie.server.common.rest.KieServerHttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -802,7 +803,7 @@ public abstract class AbstractKieServicesClientImpl {
             try {
                 return operation.doOperation(url);
             } catch (KieServerHttpRequestException e) {
-                if (e.getCause() instanceof ConnectException) {
+                if (e.getCause() instanceof IOException) {
                     logger.debug("Marking endpoint '{}' as failed due to {}", url, e.getCause().getMessage());
                     loadBalancer.markAsFailed(url);
                     nextUrl = loadBalancer.getUrl();
@@ -815,6 +816,14 @@ public abstract class AbstractKieServicesClientImpl {
         } while (nextUrl != null);
 
         throw new KieServerHttpRequestException("Unable to invoke operation " + operation);
+    }
+
+    protected String encode(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Unexpected error while encoding string '" + value + "'", e);
+        }
     }
 
     private abstract class RemoteHttpOperation {
