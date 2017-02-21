@@ -76,6 +76,10 @@
     </dependency>
     <dependency>
       <groupId>org.drools</groupId>
+      <artifactId>drools-persistence-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.drools</groupId>
       <artifactId>drools-persistence-jpa</artifactId>
     </dependency>
     <dependency>
@@ -181,6 +185,10 @@
     <dependency>
       <groupId>org.jbpm</groupId>
       <artifactId>jbpm-kie-services</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jbpm</groupId>
+      <artifactId>jbpm-persistence-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jbpm</groupId>
@@ -313,6 +321,10 @@
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-builder-support</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -476,8 +488,8 @@
       <artifactId>plexus-sec-dispatcher</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.sonatype.sisu</groupId>
-      <artifactId>sisu-guice</artifactId>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
       <classifier>no_aop</classifier>
     </dependency>
     <dependency>
